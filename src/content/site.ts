@@ -27,11 +27,10 @@ export const applyLinks = {
 } as const;
 
 export const heroContent = {
-  eyebrowOrg: "Columbia Organization of Rising Entrepreneurs",
-  headline: {
-    lead: "Connecting Columbia’s most ambitious students with startups",
-    accent: "building what’s next.",
-  },
+  kicker: "Columbia Organization of Rising Entrepreneurs",
+  kickerRight: "For Columbia students and early-stage startups",
+  headline:
+    "Connecting Columbia’s most ambitious students with startups building what’s next.",
   lede:
     "Tell us what you’re great at and what you want to learn. We’ll get to know you, then introduce you to founders who need someone exactly like you.",
 };

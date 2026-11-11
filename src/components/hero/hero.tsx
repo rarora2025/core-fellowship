@@ -1,152 +1,150 @@
 "use client";
 
 import Link from "next/link";
-import { motion, useReducedMotion, type Variants } from "framer-motion";
+import { motion, useReducedMotion } from "framer-motion";
 import { ArrowRight } from "lucide-react";
 
-import { Button } from "@/components/ui/button";
-import { ConnectionsVisual } from "@/components/hero/connections-visual";
+import { MatchField } from "@/components/hero/match-field";
 import { easeOutSoft } from "@/components/motion/easing";
 import { applyLinks, heroContent } from "@/content/site";
 
 /**
- * Hero load-in is intentionally slow: words surface one at a time out of a
- * soft blur, then the supporting copy, then the visual. Total ~3s before
- * the connections start drawing.
+ * Load-in, slowest to fastest:
+ *  1. hairline rules draw across
+ *  2. headline rises word by word from behind a mask (no blur)
+ *  3. lede and apply rows settle in
+ *  4. the match field draws itself below
  */
 export function Hero() {
-  const reduce = useReducedMotion();
+  const reduce = !!useReducedMotion();
+  const words = heroContent.headline.split(" ");
 
-  const word: Variants = {
-    hidden: reduce
-      ? { opacity: 0 }
-      : { opacity: 0, y: "0.45em", filter: "blur(14px)" },
-    show: (i: number) => ({
-      opacity: 1,
-      y: 0,
-      filter: "blur(0px)",
-      transition: {
-        duration: reduce ? 0.4 : 1.35,
-        ease: easeOutSoft,
-        delay: reduce ? 0 : 0.5 + i * 0.075,
-      },
-    }),
-  };
-
-  const fadeUp = (delay: number, distance = 14) => ({
-    initial: reduce ? { opacity: 0 } : { opacity: 0, y: distance, filter: "blur(6px)" },
-    animate: { opacity: 1, y: 0, filter: "blur(0px)" },
-    transition: { duration: reduce ? 0.4 : 1.2, ease: easeOutSoft, delay: reduce ? 0 : delay },
+  const t = (delay: number, duration = 1.2) => ({
+    duration: reduce ? 0.3 : duration,
+    ease: easeOutSoft,
+    delay: reduce ? 0 : delay,
   });
 
-  const leadWords = heroContent.headline.lead.split(" ");
-  const accentWords = heroContent.headline.accent.split(" ");
-
   return (
-    <section
-      aria-labelledby="hero-heading"
-      className="relative isolate overflow-hidden pt-28 pb-20 sm:pt-36 sm:pb-28"
-    >
-      <HeroBackdrop />
-
-      <div className="mx-auto max-w-6xl px-5 sm:px-8">
-        <div className="mx-auto flex max-w-5xl flex-col items-center text-center">
-          <motion.p
-            {...fadeUp(0.3, 8)}
-            className="inline-flex items-center gap-2 rounded-full border border-border bg-background/70 px-3.5 py-1.5 text-xs text-muted-foreground backdrop-blur sm:text-[13px]"
+    <section aria-labelledby="hero-heading" className="relative pt-24 sm:pt-28">
+      <div className="mx-auto max-w-[1280px] px-5 sm:px-8">
+        {/* Kicker row */}
+        <div className="relative flex items-center justify-between gap-6 py-4 text-[10px] uppercase tracking-[0.14em] text-muted-foreground sm:text-xs">
+          <motion.span initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={t(0.6)}>
+            {heroContent.kicker}
+          </motion.span>
+          <motion.span
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            transition={t(0.75)}
+            className="hidden text-right md:block"
           >
-            <span className="relative flex size-1.5" aria-hidden="true">
-              <span className="absolute inline-flex size-full animate-ping rounded-full bg-columbia opacity-70 [animation-duration:2.4s]" />
-              <span className="relative inline-flex size-1.5 rounded-full bg-columbia-deep" />
-            </span>
-            <span>
-              <span className="hidden sm:inline">A program by the </span>
-              {heroContent.eyebrowOrg}
-            </span>
-          </motion.p>
+            {heroContent.kickerRight}
+          </motion.span>
+          <Rule className="bottom-0" delay={0.2} reduce={reduce} />
+        </div>
 
-          <h1
-            id="hero-heading"
-            className="mt-7 text-display font-medium text-balance text-foreground"
-          >
-            <span className="sr-only">
-              {heroContent.headline.lead} {heroContent.headline.accent}
-            </span>
-            <span aria-hidden="true">
-              {leadWords.map((w, i) => (
+        {/* Headline */}
+        <h1
+          id="hero-heading"
+          className="mt-10 max-w-[17ch] font-serif text-display font-light text-foreground sm:mt-14 [font-variation-settings:'opsz'_72]"
+        >
+          <span className="sr-only">{heroContent.headline}</span>
+          <span aria-hidden="true">
+            {words.map((w, i) => (
+              <span key={i} className="inline-block overflow-hidden pb-[0.08em] align-bottom">
                 <motion.span
-                  key={`l-${i}`}
-                  custom={i}
-                  variants={word}
-                  initial="hidden"
-                  animate="show"
-                  className="inline-block will-change-[transform,filter,opacity]"
-                >
-                  {w}&nbsp;
-                </motion.span>
-              ))}
-              {accentWords.map((w, i) => (
-                <motion.span
-                  key={`a-${i}`}
-                  custom={leadWords.length + i}
-                  variants={word}
-                  initial="hidden"
-                  animate="show"
-                  className="inline-block font-serif text-[1.08em] font-normal italic tracking-[-0.02em] text-columbia-deep will-change-[transform,filter,opacity]"
+                  className="inline-block will-change-transform"
+                  initial={reduce ? { opacity: 0 } : { y: "105%" }}
+                  animate={reduce ? { opacity: 1 } : { y: "0%" }}
+                  transition={t(0.7 + i * 0.07, 1.5)}
                 >
                   {w}
-                  {i < accentWords.length - 1 ? " " : ""}
+                  {i < words.length - 1 ? " " : ""}
                 </motion.span>
-              ))}
-            </span>
-          </h1>
+              </span>
+            ))}
+          </span>
+        </h1>
 
+        {/* Lede + apply rows */}
+        <div className="mt-12 grid gap-10 pb-14 sm:mt-16 md:grid-cols-12 md:gap-8 md:pb-20">
           <motion.p
-            {...fadeUp(1.45)}
-            className="mt-7 max-w-2xl text-lede text-pretty text-muted-foreground"
+            initial={{ opacity: 0, y: reduce ? 0 : 10 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={t(1.9, 1.3)}
+            className="max-w-[38ch] text-lede text-muted-foreground md:col-span-5"
           >
             {heroContent.lede}
           </motion.p>
 
-          <motion.div
-            {...fadeUp(1.7)}
-            className="mt-10 flex w-full flex-col items-stretch gap-3 sm:w-auto sm:flex-row sm:items-center"
+          <motion.nav
+            aria-label="Apply"
+            initial={{ opacity: 0, y: reduce ? 0 : 10 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={t(2.1, 1.3)}
+            className="md:col-span-6 md:col-start-7"
           >
-            <Button asChild size="lg">
-              <Link href={applyLinks.student.href}>
-                {applyLinks.student.label}
-                <ArrowRight className="transition-transform duration-300 group-hover/button:translate-x-0.5" />
-              </Link>
-            </Button>
-            <Button asChild size="lg" variant="outline">
-              <Link href={applyLinks.startup.href}>{applyLinks.startup.label}</Link>
-            </Button>
-          </motion.div>
+            <ApplyRow href={applyLinks.student.href} label={applyLinks.student.label} note="Students" primary />
+            <ApplyRow href={applyLinks.startup.href} label={applyLinks.startup.label} note="Founders" />
+          </motion.nav>
         </div>
+      </div>
 
-        <motion.div
-          initial={reduce ? { opacity: 0 } : { opacity: 0, y: 40, scale: 0.985 }}
-          animate={{ opacity: 1, y: 0, scale: 1 }}
-          transition={{ duration: reduce ? 0.4 : 1.6, ease: easeOutSoft, delay: reduce ? 0 : 2.0 }}
-          className="mt-14 sm:mt-20"
-        >
-          <ConnectionsVisual startDelay={reduce ? 0 : 2.3} />
-        </motion.div>
+      <div className="relative">
+        <Rule className="top-0" delay={2.3} reduce={reduce} />
+        <MatchField startDelay={reduce ? 0 : 2.6} />
       </div>
     </section>
   );
 }
 
-function HeroBackdrop() {
+function ApplyRow({
+  href,
+  label,
+  note,
+  primary = false,
+}: {
+  href: string;
+  label: string;
+  note: string;
+  primary?: boolean;
+}) {
   return (
-    <div aria-hidden="true" className="pointer-events-none absolute inset-0 -z-10">
-      <motion.div
-        initial={{ opacity: 0 }}
-        animate={{ opacity: 1 }}
-        transition={{ duration: 2.4, ease: easeOutSoft }}
-        className="absolute left-1/2 top-[-18rem] h-[42rem] w-[72rem] -translate-x-1/2 rounded-full bg-[radial-gradient(closest-side,var(--columbia-soft),transparent)]"
+    <Link
+      href={href}
+      className="group relative flex items-center justify-between gap-4 border-t border-foreground/15 py-5 last:border-b sm:py-6"
+    >
+      <span
+        aria-hidden="true"
+        className="absolute inset-0 origin-left scale-x-0 bg-columbia-soft transition-transform duration-700 ease-out-soft group-hover:scale-x-100"
       />
-      <div className="absolute inset-0 bg-[radial-gradient(var(--border)_1px,transparent_1px)] [background-size:22px_22px] [mask-image:radial-gradient(ellipse_60%_50%_at_50%_30%,black,transparent)] opacity-60" />
-    </div>
+      <span className="relative flex items-baseline gap-4 sm:gap-6">
+        <span className="hidden w-20 text-[11px] uppercase tracking-[0.14em] text-subtle-foreground sm:inline">
+          {note}
+        </span>
+        <span className="text-xl tracking-[-0.01em] text-foreground sm:text-2xl">{label}</span>
+      </span>
+      <span
+        className={
+          "relative grid size-10 shrink-0 place-items-center rounded-full transition-[background-color,transform] duration-500 ease-out-soft group-hover:translate-x-1 sm:size-11 " +
+          (primary ? "bg-foreground text-background" : "border border-foreground/20 text-foreground")
+        }
+      >
+        <ArrowRight className="size-4" strokeWidth={1.75} />
+      </span>
+    </Link>
+  );
+}
+
+function Rule({ className, delay, reduce }: { className?: string; delay: number; reduce: boolean }) {
+  return (
+    <motion.span
+      aria-hidden="true"
+      initial={{ scaleX: reduce ? 1 : 0, opacity: reduce ? 0 : 1 }}
+      animate={{ scaleX: 1, opacity: 1 }}
+      transition={{ duration: reduce ? 0.3 : 1.8, ease: easeOutSoft, delay: reduce ? 0 : delay }}
+      className={"absolute inset-x-0 h-px origin-left bg-foreground/15 " + (className ?? "")}
+    />
   );
 }

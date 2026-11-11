@@ -46,7 +46,7 @@ export function Navbar() {
       >
         <nav
           aria-label="Main"
-          className="mx-auto flex h-16 max-w-6xl items-center justify-between px-5 sm:px-8"
+          className="mx-auto flex h-16 max-w-[1280px] items-center justify-between px-5 sm:px-8"
         >
           <Logo />
 
@@ -55,7 +55,7 @@ export function Navbar() {
               <li key={link.href}>
                 <Link
                   href={link.href}
-                  className="rounded-full px-3.5 py-2 text-sm text-muted-foreground transition-colors duration-300 hover:text-foreground"
+                  className="px-3 py-2 text-[14px] text-muted-foreground transition-colors duration-300 hover:text-foreground"
                 >
                   {link.label}
                 </Link>
@@ -64,9 +64,6 @@ export function Navbar() {
           </ul>
 
           <div className="hidden items-center gap-2 md:flex">
-            <Button asChild variant="ghost" size="sm">
-              <Link href={applyLinks.startup.href}>For startups</Link>
-            </Button>
             <Button asChild size="sm">
               <Link href={applyLinks.student.href}>
                 Apply
@@ -109,7 +106,7 @@ export function Navbar() {
                   <Link
                     href={link.href}
                     onClick={() => setOpen(false)}
-                    className="block border-b border-border py-4 text-2xl tracking-[-0.02em]"
+                    className="block border-b border-border py-4 font-serif text-3xl font-light tracking-[-0.01em]"
                   >
                     {link.label}
                   </Link>
