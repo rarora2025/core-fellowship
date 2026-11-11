@@ -1,36 +1,51 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# CORE Fellowship
 
-## Getting Started
+Website for CORE Fellowship, a program by the Columbia Organization of Rising Entrepreneurs that matches Columbia students with early-stage startups.
 
-First, run the development server:
+## Stack
+
+Next.js (App Router) · TypeScript · Tailwind CSS v4 · shadcn/ui · Framer Motion · Lucide
+
+## Getting started
 
 ```bash
+npm install
 npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+Open http://localhost:3000.
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+## Structure
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+```
+src/
+  app/                  routes, layout, global styles and design tokens
+  components/
+    ui/                 shadcn/ui primitives (button, ...)
+    site/               site chrome (navbar, logo)
+    hero/               hero section and the connections visual
+    motion/             shared easing curves
+  content/site.ts       all copy and links in one place
+  lib/utils.ts          cn() helper
+```
 
-## Learn More
+## Design tokens
 
-To learn more about Next.js, take a look at the following resources:
+Defined in `src/app/globals.css`:
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+- Canvas `#ffffff`, ink `#0b0d12`, muted text `#5c6370`
+- Columbia blue `#b9d9eb` with `columbia-soft`, `columbia-deep`, `columbia-ink` variants
+- Type: Geist (sans) for UI and headlines, Instrument Serif italic for accents
+- Fluid display sizes: `text-display`, `text-headline`, `text-lede`
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+## Content rules
 
-## Deploy on Vercel
+No invented stats, testimonials, partner names, or program policies. Anything unconfirmed should be an obvious, editable placeholder in `src/content`.
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+## Status
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+- [x] Foundation, nav, hero
+- [ ] How it works
+- [ ] For students / for startups
+- [ ] FAQ
+- [ ] Student and startup application flows
