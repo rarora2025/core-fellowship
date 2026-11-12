@@ -17,5 +17,4 @@ export const outerRing: OrbitItem[] = [
   { label: "Omen", logo: "/logos/omen.png", href: "https://omen.trade" },
   { label: "Icon", logo: "/logos/icon.png", href: "https://www.icon.com" },
   { label: "OneRange", logo: "/logos/onerange.png", href: "https://www.getrange.com" },
-  { label: "Openigloo", logo: "/logos/openigloo.png", href: "https://www.openigloo.com" },
 ];

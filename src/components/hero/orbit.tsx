@@ -24,9 +24,12 @@ export function Orbit() {
         @media (min-width: 640px) { :root { --r1: 330px; --r2: 500px; --orb: 58px; } }
         @media (min-width: 1100px) { :root { --r1: 380px; --r2: 580px; --orb: 64px; } }
         @keyframes orbit-spin { to { transform: rotate(360deg); } }
-        @keyframes orbit-unspin { to { transform: rotate(-360deg); } }
+        @keyframes orbit-flip {
+          0%, 78% { transform: perspective(400px) rotateY(0deg); }
+          100% { transform: perspective(400px) rotateY(360deg); }
+        }
         @media (prefers-reduced-motion: reduce) {
-          .orbit-ring, .orbit-item { animation: none !important; }
+          .orbit-ring, .orbit-item, .orbit-flip { animation: none !important; }
         }
       `}</style>
     </div>
@@ -73,7 +76,13 @@ function Ring({
                 style={{ width: "var(--orb)", height: "var(--orb)" }}
                 title={item.label}
               >
-                <Image src={item.logo} alt="" width={128} height={128} className="size-full object-cover" />
+                {/* Every few seconds each logo flips over once, staggered around the ring. */}
+                <div
+                  className="orbit-flip size-full"
+                  style={{ animation: `orbit-flip 7s cubic-bezier(0.65,0,0.35,1) ${delay + 2 + i * 1.3}s infinite` }}
+                >
+                  <Image src={item.logo} alt="" width={128} height={128} className="size-full object-cover" />
+                </div>
               </motion.div>
             </div>
           </div>
