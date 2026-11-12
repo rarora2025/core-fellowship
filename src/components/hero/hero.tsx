@@ -3,8 +3,10 @@
 import { motion, useReducedMotion } from "framer-motion";
 
 import { StartCard } from "@/components/hero/start-card";
+import { Orbit } from "@/components/hero/orbit";
 import { Circle, Marker, Note, Underline } from "@/components/hero/hand-drawn";
 import type { Accent } from "@/components/hero/accents";
+import { CoreWord } from "@/components/hero/core-word";
 import { easeOutSoft } from "@/components/motion/easing";
 import { heroContent } from "@/content/site";
 
@@ -23,8 +25,9 @@ export function Hero({ accent = "marker" }: { accent?: Accent }) {
   return (
     <section
       aria-labelledby="hero-heading"
-      className="relative flex min-h-[100svh] flex-col items-center justify-center px-5 pb-16 pt-28 sm:px-8"
+      className="relative isolate flex min-h-[100svh] flex-col items-center justify-center overflow-hidden px-5 pb-16 pt-28 sm:px-8"
     >
+      <Orbit />
       <div className="flex w-full max-w-[720px] flex-col items-center text-center">
         <motion.h1
           id="hero-heading"
@@ -34,7 +37,13 @@ export function Hero({ accent = "marker" }: { accent?: Accent }) {
           {accent === "note" && <Note />}
           <span className="sr-only">{heroContent.title}</span>
           <span aria-hidden="true">
-            {accent === "circle" ? <Circle>CORE</Circle> : "CORE"}{" "}
+            {accent === "circle" ? (
+              <Circle>
+                <CoreWord />
+              </Circle>
+            ) : (
+              <CoreWord />
+            )}{" "}
             {accent === "marker" ? (
               <Marker>Fellowship</Marker>
             ) : accent === "underline" ? (

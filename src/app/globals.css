@@ -23,6 +23,7 @@
   /* Columbia blue family */
   --brand: #54a1ff;           /* CORE logo blue */
   --brand-deep: #2f7fe0;      /* logo blue, darkened for text on white */
+  --brand-logo: #3b8ff5;      /* logo blue for large display type (3:1+ on white) */
   --columbia: #b9d9eb;        /* the official light Columbia blue */
   --columbia-soft: #eaf4fa;   /* washes and glows */
   --columbia-deep: #2a5d8f;   /* accessible accent text on white */
@@ -57,6 +58,7 @@
   --ring: #4f8fd6;
 
   --brand-deep: #74b4ff;      /* lighter so it reads on dark */
+  --brand-logo: #54a1ff;
   --columbia-soft: #13263b;
   --columbia-deep: #8cc0f0;
   --columbia-ink: #d6e8ff;
@@ -102,6 +104,7 @@
 
   --color-brand: var(--brand);
   --color-brand-deep: var(--brand-deep);
+  --color-brand-logo: var(--brand-logo);
   --color-marker: var(--marker);
   --color-columbia: var(--columbia);
   --color-columbia-soft: var(--columbia-soft);
