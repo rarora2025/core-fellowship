@@ -3,6 +3,8 @@
 import { motion, useReducedMotion } from "framer-motion";
 
 import { StartCard } from "@/components/hero/start-card";
+import { Circle, Marker, Note, Underline } from "@/components/hero/hand-drawn";
+import type { Accent } from "@/components/hero/accents";
 import { easeOutSoft } from "@/components/motion/easing";
 import { heroContent } from "@/content/site";
 
@@ -10,7 +12,7 @@ import { heroContent } from "@/content/site";
  * Quiet, centered hero. The only "visual" is the real thing:
  * the card where an application starts.
  */
-export function Hero() {
+export function Hero({ accent = "marker" }: { accent?: Accent }) {
   const reduce = !!useReducedMotion();
   const rise = (delay: number, y = 16) => ({
     initial: { opacity: 0, y: reduce ? 0 : y },
@@ -27,9 +29,20 @@ export function Hero() {
         <motion.h1
           id="hero-heading"
           {...rise(0.2, 16)}
-          className="font-display text-[clamp(2.3rem,1.5rem+2.6vw,3.6rem)] font-bold leading-[1.05] tracking-[-0.03em] text-foreground"
+          className="relative isolate flex flex-col items-center font-display text-[clamp(2.3rem,1.5rem+2.6vw,3.6rem)] font-bold leading-[1.05] tracking-[-0.03em] text-foreground"
         >
-          {heroContent.title}
+          {accent === "note" && <Note />}
+          <span className="sr-only">{heroContent.title}</span>
+          <span aria-hidden="true">
+            {accent === "circle" ? <Circle>CORE</Circle> : "CORE"}{" "}
+            {accent === "marker" ? (
+              <Marker>Fellowship</Marker>
+            ) : accent === "underline" ? (
+              <Underline>Fellowship</Underline>
+            ) : (
+              "Fellowship"
+            )}
+          </span>
         </motion.h1>
 
         <motion.div {...rise(0.6, 24)} className="mt-10 w-full max-w-[420px]">

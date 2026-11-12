@@ -14,7 +14,6 @@ export const siteConfig = {
     "CORE Fellowship matches Columbia students with early-stage startups through real conversations, not just resumes.",
 };
 
-export const navLinks = [{ label: "How it works", href: "/how-it-works" }] as const;
 
 export const applyLinks = {
   student: { label: "Apply as a Student", href: "/apply/student" },

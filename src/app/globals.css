@@ -40,12 +40,44 @@
   --accent: var(--columbia-soft);
   --accent-foreground: var(--columbia-ink);
   --destructive: #c4382f;
+  --marker: #a9d1ff;          /* hand-drawn highlighter */
+  --shadow-color: 15 44 74;
+  color-scheme: light;
+}
+
+/* Dark mode: set by the toggle (class on <html>), defaulting to the OS setting. */
+.dark {
+  --background: #0b0d12;
+  --foreground: #f2f4f7;
+  --muted: #161a22;
+  --muted-foreground: #9aa3b0;
+  --subtle-foreground: #6b7380;
+  --border: #232833;
+  --input: #2c323d;
+  --ring: #4f8fd6;
+
+  --brand-deep: #74b4ff;      /* lighter so it reads on dark */
+  --columbia-soft: #13263b;
+  --columbia-deep: #8cc0f0;
+  --columbia-ink: #d6e8ff;
+
+  --card: #12151c;
+  --popover: #12151c;
+  --primary: #f2f4f7;
+  --primary-foreground: #0b0d12;
+  --secondary: #1a1f28;
+  --secondary-foreground: #f2f4f7;
+  --destructive: #ff6b5e;
+  --marker: #1e4f8c;
+  --shadow-color: 0 0 0;
+  color-scheme: dark;
 }
 
 @theme inline {
   --font-sans: var(--font-sans);
   --font-serif: var(--font-serif);
   --font-display: var(--font-display);
+  --font-hand: var(--font-hand);
   --font-mono: var(--font-mono);
 
   --color-background: var(--background);
@@ -70,6 +102,7 @@
 
   --color-brand: var(--brand);
   --color-brand-deep: var(--brand-deep);
+  --color-marker: var(--marker);
   --color-columbia: var(--columbia);
   --color-columbia-soft: var(--columbia-soft);
   --color-columbia-deep: var(--columbia-deep);
@@ -103,6 +136,7 @@
   }
   body {
     @apply bg-background text-foreground font-sans antialiased;
+    transition: background-color 0.4s ease, color 0.4s ease;
     text-rendering: optimizeLegibility;
   }
   ::selection {

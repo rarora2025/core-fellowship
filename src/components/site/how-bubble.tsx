@@ -50,7 +50,7 @@ export function HowBubble() {
         animate={{ opacity: 1, scale: 1 }}
         style={{ borderRadius: open ? 24 : 999 }}
         className={
-          "origin-bottom-right overflow-hidden border border-border bg-white shadow-[0_1px_2px_rgba(11,13,18,0.06),0_24px_48px_-20px_rgba(15,44,74,0.28)] " +
+          "origin-bottom-right overflow-hidden border border-border bg-card shadow-[0_1px_2px_rgb(var(--shadow-color)/0.06),0_24px_48px_-20px_rgb(var(--shadow-color)/0.35)] " +
           (open ? "w-[min(420px,calc(100vw-2.5rem))]" : "")
         }
       >

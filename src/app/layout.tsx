@@ -1,10 +1,11 @@
 import type { Metadata, Viewport } from "next";
-import { Montserrat, Newsreader, Schibsted_Grotesk } from "next/font/google";
+import { Caveat, Montserrat, Newsreader, Schibsted_Grotesk } from "next/font/google";
 import { siteConfig } from "@/content/site";
 import "./globals.css";
 
 const sans = Schibsted_Grotesk({ variable: "--font-sans", subsets: ["latin"] });
 // Geometric display face, close to the CORE logo lettering.
+const hand = Caveat({ variable: "--font-hand", subsets: ["latin"], weight: ["600"] });
 const display = Montserrat({ variable: "--font-display", subsets: ["latin"], weight: ["700", "800"] });
 const serif = Newsreader({
   variable: "--font-serif",
@@ -36,7 +37,10 @@ export const metadata: Metadata = {
 };
 
 export const viewport: Viewport = {
-  themeColor: "#ffffff",
+  themeColor: [
+    { media: "(prefers-color-scheme: light)", color: "#ffffff" },
+    { media: "(prefers-color-scheme: dark)", color: "#0b0d12" },
+  ],
   width: "device-width",
   initialScale: 1,
 };
@@ -45,7 +49,15 @@ export default function RootLayout({
   children,
 }: Readonly<{ children: React.ReactNode }>) {
   return (
-    <html lang="en" className={`${sans.variable} ${serif.variable} ${display.variable}`}>
+    <html lang="en" suppressHydrationWarning className={`${sans.variable} ${serif.variable} ${display.variable} ${hand.variable}`}>
+      <head>
+        {/* Set the theme before paint so there's no flash. */}
+        <script
+          dangerouslySetInnerHTML={{
+            __html: `try{var t=localStorage.getItem("theme");if(t==="dark"||(!t&&matchMedia("(prefers-color-scheme: dark)").matches))document.documentElement.classList.add("dark")}catch(e){}`,
+          }}
+        />
+      </head>
       <body>
         <a
           href="#main"

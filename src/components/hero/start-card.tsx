@@ -47,7 +47,7 @@ export function StartCard() {
     <form
       onSubmit={submit}
       noValidate
-      className="w-full rounded-[22px] border border-border bg-white p-2 shadow-[0_1px_2px_rgba(11,13,18,0.04),0_24px_48px_-24px_rgba(15,44,74,0.18)]"
+      className="w-full rounded-[22px] border border-border bg-card p-2 shadow-[0_1px_2px_rgb(var(--shadow-color)/0.05),0_24px_48px_-24px_rgb(var(--shadow-color)/0.25)]"
     >
       {/* Audience switch */}
       <div role="radiogroup" aria-label="I am applying as" className="relative grid grid-cols-2 rounded-2xl bg-muted p-1">
@@ -72,7 +72,7 @@ export function StartCard() {
                 <motion.span
                   layoutId={`${id}-pill`}
                   transition={{ duration: 0.5, ease: easeOutSoft }}
-                  className="absolute inset-0 -z-10 rounded-xl bg-white shadow-[0_1px_2px_rgba(11,13,18,0.08)]"
+                  className="absolute inset-0 -z-10 rounded-xl bg-card shadow-[0_1px_2px_rgb(var(--shadow-color)/0.12)] dark:bg-secondary"
                 />
               )}
               {copy[key].label}
