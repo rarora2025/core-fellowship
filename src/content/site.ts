@@ -14,12 +14,7 @@ export const siteConfig = {
     "CORE Fellowship matches Columbia students with early-stage startups through real conversations, not just resumes.",
 };
 
-export const navLinks = [
-  { label: "How it works", href: "/#how-it-works" },
-  { label: "Students", href: "/#students" },
-  { label: "Startups", href: "/#startups" },
-  { label: "FAQ", href: "/#faq" },
-] as const;
+export const navLinks = [{ label: "How it works", href: "/how-it-works" }] as const;
 
 export const applyLinks = {
   student: { label: "Apply as a Student", href: "/apply/student" },
@@ -27,10 +22,16 @@ export const applyLinks = {
 } as const;
 
 export const heroContent = {
-  kicker: "Columbia Organization of Rising Entrepreneurs",
-  kickerRight: "For Columbia students and early-stage startups",
-  headline:
-    "Connecting Columbia’s most ambitious students with startups building what’s next.",
-  lede:
-    "Tell us what you’re great at and what you want to learn. We’ll get to know you, then introduce you to founders who need someone exactly like you.",
+  eyebrow: "CORE Fellowship",
+  headlineLead: "Connecting Columbia students to",
+  // The last phrase types itself out, one at a time.
+  headlinePhrases: [
+    "jobs.",
+    "startups.",
+    "founders.",
+    "internships.",
+    "early-stage teams.",
+    "new opportunities.",
+  ],
+  headlineA11y: "Connecting Columbia students to jobs, startups, founders, internships, early-stage teams, and new opportunities.",
 };

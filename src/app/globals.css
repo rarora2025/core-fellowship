@@ -21,6 +21,8 @@
   --ring: #7fb3dc;
 
   /* Columbia blue family */
+  --brand: #54a1ff;           /* CORE logo blue */
+  --brand-deep: #2f7fe0;      /* logo blue, darkened for text on white */
   --columbia: #b9d9eb;        /* the official light Columbia blue */
   --columbia-soft: #eaf4fa;   /* washes and glows */
   --columbia-deep: #2a5d8f;   /* accessible accent text on white */
@@ -65,6 +67,8 @@
   --color-accent-foreground: var(--accent-foreground);
   --color-destructive: var(--destructive);
 
+  --color-brand: var(--brand);
+  --color-brand-deep: var(--brand-deep);
   --color-columbia: var(--columbia);
   --color-columbia-soft: var(--columbia-soft);
   --color-columbia-deep: var(--columbia-deep);
@@ -115,4 +119,9 @@
   html {
     scroll-behavior: auto;
   }
+}
+
+@keyframes caret {
+  0%, 50% { opacity: 1; }
+  50.01%, 100% { opacity: 0; }
 }
