@@ -7,7 +7,7 @@ import { easeOutSoft } from "@/components/motion/easing";
 export function Reveal({
   children,
   delay = 0,
-  y = 24,
+  y = 10,
   className,
   as = "div",
 }: {
@@ -15,7 +15,7 @@ export function Reveal({
   delay?: number;
   y?: number;
   className?: string;
-  as?: "div" | "p" | "h2" | "li";
+  as?: "div" | "p" | "h1" | "h2" | "li";
 }) {
   const reduce = useReducedMotion();
   const Comp = motion[as];
@@ -24,7 +24,7 @@ export function Reveal({
       initial={{ opacity: 0, y: reduce ? 0 : y }}
       whileInView={{ opacity: 1, y: 0 }}
       viewport={{ once: true, margin: "0px 0px -12% 0px" }}
-      transition={{ duration: reduce ? 0.3 : 1.5, ease: easeOutSoft, delay: reduce ? 0 : delay }}
+      transition={{ duration: reduce ? 0.3 : 1.4, ease: easeOutSoft, delay: reduce ? 0 : delay }}
       className={className}
     >
       {children}

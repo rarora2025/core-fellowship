@@ -5,70 +5,68 @@ import { ArrowRight } from "lucide-react";
 import { Navbar } from "@/components/site/navbar";
 import { Button } from "@/components/ui/button";
 import { Reveal } from "@/components/how/reveal";
-import { Steps } from "@/components/how/steps";
-import { IntroTitle } from "@/components/how/intro-title";
 import { applyLinks } from "@/content/site";
-import { howClosing, howIntro } from "@/content/how-it-works";
+import { howClosing, howIntro, howSteps } from "@/content/how-it-works";
 
 export const metadata: Metadata = {
   title: "How it works",
   description:
-    "How CORE Fellowship matches Columbia students with early-stage startups: tell us about yourself, we get to know you, then we make the introduction.",
+    "How CORE Fellowship matches Columbia students with early-stage startups: you apply, we talk, and we make the introduction.",
 };
 
+/**
+ * A plain reading page: one column, real paragraphs, a numbered list.
+ * Motion is limited to a slow fade as each block arrives.
+ */
 export default function HowItWorksPage() {
   return (
     <>
       <Navbar />
-      <main id="main" className="mx-auto max-w-[1200px] px-5 sm:px-8">
-        {/* Intro */}
-        <section aria-labelledby="how-title" className="pb-28 pt-36 sm:pb-40 sm:pt-48">
-          <Reveal as="p" y={8} className="text-sm text-brand-deep">
-            {howIntro.kicker}
-          </Reveal>
-          <IntroTitle id="how-title" text={howIntro.title} />
-          <div className="mt-14 grid gap-8 md:grid-cols-12">
-            {howIntro.paragraphs.map((p, i) => (
-              <Reveal
-                key={i}
-                as="p"
-                delay={1.1 + i * 0.25}
-                className={
-                  "text-[19px] leading-[1.65] md:col-span-5 " +
-                  (i === 1 ? "text-foreground md:col-start-7" : "text-muted-foreground")
-                }
-              >
-                {p}
-              </Reveal>
-            ))}
-          </div>
-        </section>
+      <main id="main" className="mx-auto max-w-[680px] px-5 pb-32 pt-36 sm:px-8 sm:pt-44">
+        <Reveal as="h1" delay={0.1} className="text-[clamp(2.2rem,1.6rem+2vw,3.25rem)] font-medium leading-[1.08] tracking-[-0.035em]">
+          How it works
+        </Reveal>
 
-        {/* Steps */}
-        <section aria-label="The three steps" className="border-t border-border pt-24 sm:pt-32">
-          <Steps />
-        </section>
+        <div className="mt-8 space-y-6 text-[18px] leading-[1.7] text-muted-foreground">
+          {howIntro.map((p, i) => (
+            <Reveal key={i} as="p" delay={0.35 + i * 0.2}>
+              {p}
+            </Reveal>
+          ))}
+        </div>
 
-        {/* Closing */}
-        <section className="py-32 text-center sm:py-48">
-          <Reveal as="h2" className="mx-auto max-w-[18ch] text-[clamp(2.2rem,1.4rem+3vw,4rem)] font-medium leading-[1.05] tracking-[-0.035em]">
-            {howClosing.title}
-          </Reveal>
-          <Reveal as="p" delay={0.2} className="mx-auto mt-6 max-w-[46ch] text-[18px] leading-relaxed text-muted-foreground">
-            {howClosing.body}
-          </Reveal>
-          <Reveal delay={0.4} className="mt-10 flex flex-col justify-center gap-3 sm:flex-row">
-            <Button asChild size="lg">
+        <ol className="mt-16 border-t border-border">
+          {howSteps.map((s, i) => (
+            <Reveal
+              key={s.title}
+              as="li"
+              delay={i < 1 ? 0.8 : 0}
+              className="grid grid-cols-[2.5rem_1fr] gap-x-2 border-b border-border py-8 sm:grid-cols-[3.5rem_1fr]"
+            >
+              <span className="pt-0.5 text-[15px] tabular-nums text-subtle-foreground">{i + 1}</span>
+              <div>
+                <h2 className="text-[20px] font-medium tracking-[-0.015em] text-foreground">{s.title}</h2>
+                <p className="mt-2 text-[17px] leading-[1.7] text-muted-foreground">{s.body}</p>
+              </div>
+            </Reveal>
+          ))}
+        </ol>
+
+        <Reveal className="mt-16">
+          <h2 className="text-[20px] font-medium tracking-[-0.015em]">{howClosing.title}</h2>
+          <p className="mt-2 text-[17px] leading-[1.7] text-muted-foreground">{howClosing.body}</p>
+          <div className="mt-6 flex flex-col gap-3 sm:flex-row">
+            <Button asChild>
               <Link href={applyLinks.student.href}>
                 I&apos;m a student
                 <ArrowRight className="transition-transform duration-300 group-hover/button:translate-x-0.5" />
               </Link>
             </Button>
-            <Button asChild size="lg" variant="outline">
+            <Button asChild variant="outline">
               <Link href={applyLinks.startup.href}>I&apos;m a startup</Link>
             </Button>
-          </Reveal>
-        </section>
+          </div>
+        </Reveal>
       </main>
     </>
   );

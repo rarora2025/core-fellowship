@@ -22,16 +22,5 @@ export const applyLinks = {
 } as const;
 
 export const heroContent = {
-  eyebrow: "CORE Fellowship",
-  headlineLead: "Connecting Columbia students to",
-  // The last phrase types itself out, one at a time.
-  headlinePhrases: [
-    "jobs.",
-    "startups.",
-    "founders.",
-    "internships.",
-    "early-stage teams.",
-    "new opportunities.",
-  ],
-  headlineA11y: "Connecting Columbia students to jobs, startups, founders, internships, early-stage teams, and new opportunities.",
+  title: "CORE Fellowship",
 };
