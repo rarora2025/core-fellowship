@@ -1,32 +1,21 @@
 /**
- * Circles that orbit the hero. Right now these are neutral sector icons.
- * Only add a startup's logo (`logo: "/logos/name.svg"`) once that company
- * has actually agreed to be shown, since a logo here reads as a partnership.
+ * Circles that orbit the hero: startups working with CORE that agreed to be
+ * shown (confirmed by Rahul, Nov 2026). Logos live in /public/logos.
+ * Only add a company here once it has agreed, since a logo reads as a partnership.
  */
-export type OrbitItem = { label: string; icon: string; logo?: string };
+export type OrbitItem = { label: string; logo: string; href: string };
 
 export const innerRing: OrbitItem[] = [
-  { label: "Fintech", icon: "wallet" },
-  { label: "Climate", icon: "leaf" },
-  { label: "Health", icon: "heart-pulse" },
-  { label: "Developer tools", icon: "terminal" },
-  { label: "AI", icon: "sparkles" },
-  { label: "Hardware", icon: "cpu" },
-  { label: "Consumer", icon: "shopping-bag" },
-  { label: "Education", icon: "graduation-cap" },
+  { label: "Kalshi", logo: "/logos/kalshi.png", href: "https://kalshi.com" },
+  { label: "Scoutify", logo: "/logos/scoutify.png", href: "https://scoutify.com" },
+  { label: "Vega", logo: "/logos/vega.png", href: "https://www.joinvega.com" },
+  { label: "Enigma", logo: "/logos/enigma.png", href: "https://www.enigma.com" },
 ];
 
 export const outerRing: OrbitItem[] = [
-  { label: "Markets", icon: "line-chart" },
-  { label: "Robotics", icon: "bot" },
-  { label: "Media", icon: "clapperboard" },
-  { label: "Biotech", icon: "flask-conical" },
-  { label: "Mobility", icon: "car" },
-  { label: "Security", icon: "shield" },
-  { label: "Real estate", icon: "building-2" },
-  { label: "Space", icon: "rocket" },
-  { label: "Food", icon: "utensils" },
-  { label: "Gaming", icon: "gamepad-2" },
-  { label: "Marketplaces", icon: "store" },
-  { label: "Global", icon: "globe" },
+  { label: "Daps", logo: "/logos/daps.png", href: "https://getdaps.io" },
+  { label: "Omen", logo: "/logos/omen.png", href: "https://omen.trade" },
+  { label: "Icon", logo: "/logos/icon.png", href: "https://www.icon.com" },
+  { label: "OneRange", logo: "/logos/onerange.png", href: "https://www.getrange.com" },
+  { label: "Openigloo", logo: "/logos/openigloo.png", href: "https://www.openigloo.com" },
 ];

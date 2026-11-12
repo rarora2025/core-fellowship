@@ -2,21 +2,7 @@
 
 import Image from "next/image";
 import { motion, useReducedMotion } from "framer-motion";
-import {
-  Bot, Building2, Car, Clapperboard, Cpu, FlaskConical, Gamepad2, Globe, GraduationCap,
-  HeartPulse, Leaf, LineChart, Rocket, Shield, ShoppingBag, Sparkles, Store, Terminal,
-  Utensils, Wallet, type LucideIcon,
-} from "lucide-react";
-
 import { innerRing, outerRing, type OrbitItem } from "@/content/orbit";
-
-const icons: Record<string, LucideIcon> = {
-  wallet: Wallet, leaf: Leaf, "heart-pulse": HeartPulse, terminal: Terminal, sparkles: Sparkles,
-  cpu: Cpu, "shopping-bag": ShoppingBag, "graduation-cap": GraduationCap, "line-chart": LineChart,
-  bot: Bot, clapperboard: Clapperboard, "flask-conical": FlaskConical, car: Car, shield: Shield,
-  "building-2": Building2, rocket: Rocket, utensils: Utensils, "gamepad-2": Gamepad2, store: Store,
-  globe: Globe,
-};
 
 /**
  * Two rings of circles slowly turning around the hero, in opposite
@@ -69,7 +55,6 @@ function Ring({
     >
       {items.map((item, i) => {
         const angle = (360 / items.length) * i;
-        const Icon = icons[item.icon] ?? Globe;
         return (
           <div
             key={item.label}
@@ -84,15 +69,11 @@ function Ring({
                 initial={{ opacity: 0, scale: reduce ? 1 : 0.6 }}
                 animate={{ opacity: 1, scale: 1 }}
                 transition={{ duration: 1.2, ease: [0.22, 1, 0.36, 1], delay: reduce ? 0 : delay + i * 0.06 }}
-                className="grid -translate-x-1/2 -translate-y-1/2 place-items-center overflow-hidden rounded-full border border-border bg-card text-muted-foreground shadow-[0_8px_24px_-12px_rgb(var(--shadow-color)/0.25)]"
+                className="grid -translate-x-1/2 -translate-y-1/2 place-items-center overflow-hidden rounded-full border border-border bg-white shadow-[0_8px_24px_-12px_rgb(var(--shadow-color)/0.25)]"
                 style={{ width: "var(--orb)", height: "var(--orb)" }}
                 title={item.label}
               >
-                {item.logo ? (
-                  <Image src={item.logo} alt="" width={64} height={64} className="size-full object-cover" />
-                ) : (
-                  <Icon className="size-[42%]" strokeWidth={1.5} />
-                )}
+                <Image src={item.logo} alt="" width={128} height={128} className="size-full object-cover" />
               </motion.div>
             </div>
           </div>
