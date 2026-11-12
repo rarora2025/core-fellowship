@@ -1,9 +1,11 @@
 import type { Metadata, Viewport } from "next";
-import { Newsreader, Schibsted_Grotesk } from "next/font/google";
+import { Montserrat, Newsreader, Schibsted_Grotesk } from "next/font/google";
 import { siteConfig } from "@/content/site";
 import "./globals.css";
 
 const sans = Schibsted_Grotesk({ variable: "--font-sans", subsets: ["latin"] });
+// Geometric display face, close to the CORE logo lettering.
+const display = Montserrat({ variable: "--font-display", subsets: ["latin"], weight: ["700", "800"] });
 const serif = Newsreader({
   variable: "--font-serif",
   subsets: ["latin"],
@@ -43,7 +45,7 @@ export default function RootLayout({
   children,
 }: Readonly<{ children: React.ReactNode }>) {
   return (
-    <html lang="en" className={`${sans.variable} ${serif.variable}`}>
+    <html lang="en" className={`${sans.variable} ${serif.variable} ${display.variable}`}>
       <body>
         <a
           href="#main"

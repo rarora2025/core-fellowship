@@ -27,7 +27,7 @@ export function Hero() {
         <motion.h1
           id="hero-heading"
           {...rise(0.2, 16)}
-          className="text-[clamp(2.4rem,1.6rem+2.6vw,3.75rem)] font-medium leading-[1.05] tracking-[-0.035em] text-foreground"
+          className="font-display text-[clamp(2.3rem,1.5rem+2.6vw,3.6rem)] font-bold leading-[1.05] tracking-[-0.03em] text-foreground"
         >
           {heroContent.title}
         </motion.h1>
