@@ -62,6 +62,18 @@ function decodeEntities(s: string) {
 const BROWSER_UA =
   "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0 Safari/537.36";
 
+/** Bing wraps result links as bing.com/ck/a?...&u=a1<base64url of the real URL>. */
+function unwrapBing(href: string) {
+  try {
+    const u = new URL(href, "https://www.bing.com");
+    const enc = u.searchParams.get("u");
+    if (u.hostname.endsWith("bing.com") && enc?.startsWith("a1")) {
+      return Buffer.from(enc.slice(2).replace(/-/g, "+").replace(/_/g, "/"), "base64").toString("utf8");
+    }
+  } catch {}
+  return href;
+}
+
 /** Reads Bing's results page. Used when DuckDuckGo is rate limiting. */
 async function bingResults(q: string): Promise<Raw[]> {
   const res = await fetch(`https://www.bing.com/search?count=15&setlang=en-US&q=${encodeURIComponent(q)}`, {
@@ -76,7 +88,7 @@ async function bingResults(q: string): Promise<Raw[]> {
     const a = b.match(/<h2[^>]*>\s*<a[^>]+href="([^"]+)"[^>]*>([\s\S]*?)<\/a>/);
     if (!a) continue;
     const p = b.match(/<p[^>]*>([\s\S]*?)<\/p>/);
-    out.push({ url: decodeEntities(a[1]), title: decodeEntities(a[2]), description: decodeEntities(p?.[1] ?? "") });
+    out.push({ url: unwrapBing(decodeEntities(a[1])), title: decodeEntities(a[2]), description: decodeEntities(p?.[1] ?? "") });
   }
   return out;
 }
