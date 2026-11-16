@@ -127,7 +127,7 @@ export async function searchLinkedIn({ name, gradYear, major }: Query): Promise<
 
   const want = name.trim().toLowerCase().split(/\s+/);
   const seen = new Set<string>();
-  const scored: (ProfileMatch & { score: number })[] = [];
+  const scored: (ProfileMatch & { score: number; columbia: boolean })[] = [];
   for (const r of raw) {
     const url = cleanUrl(r.url);
     if (!url || seen.has(url)) continue;
@@ -135,15 +135,18 @@ export async function searchLinkedIn({ name, gradYear, major }: Query): Promise<
     const { name: n, headline } = parseTitle(r.title);
     const text = `${r.title} ${r.description}`.toLowerCase();
     let score = want.filter((w) => n.toLowerCase().includes(w)).length * 3;
-    if (text.includes("columbia")) score += 3;
+    const columbia = /columbia|barnard/.test(text);
+    if (columbia) score += 3;
     if (major && text.includes(major.toLowerCase())) score += 2;
     if (gradYear && /^\d{4}$/.test(gradYear) && text.includes(gradYear)) score += 1;
     if (score < 3) continue;
-    scored.push({ url, name: n, headline, photo: r.photo, score });
+    scored.push({ url, name: n, headline, photo: r.photo, score, columbia });
   }
-  const results = scored
+  // Prefer people tied to Columbia; only fall back to everyone if none are.
+  const pool = scored.some((m) => m.columbia) ? scored.filter((m) => m.columbia) : scored;
+  const results = pool
     .sort((a, b) => b.score - a.score)
-    .slice(0, 4)
+    .slice(0, 3)
     .map(({ url, name, headline, photo }) => ({ url, name, headline, photo }));
   cache.set(key, { at: Date.now(), results });
   return results;
