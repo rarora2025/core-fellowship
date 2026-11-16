@@ -32,7 +32,7 @@ export function Navbar() {
       >
         <div className="flex items-center gap-1.5">
           <ThemeToggle />
-          <Button asChild size="sm">
+          <Button asChild size="sm" variant="cta">
             <Link href={applyLinks.student.href}>
               Apply
               <ArrowUpRight className="transition-transform duration-300 group-hover/button:-translate-y-px group-hover/button:translate-x-px" />

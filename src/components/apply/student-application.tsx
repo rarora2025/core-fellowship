@@ -73,6 +73,9 @@ function clearDraft() {
   } catch {}
 }
 
+const iconButton =
+  "grid size-10 place-items-center rounded-full text-muted-foreground outline-none transition-colors duration-300 hover:bg-muted hover:text-foreground focus-visible:ring-[3px] focus-visible:ring-ring/50";
+
 const cardClass =
   "w-full rounded-[22px] border border-border bg-card p-2 shadow-[0_1px_2px_rgb(var(--shadow-color)/0.05),0_24px_48px_-24px_rgb(var(--shadow-color)/0.25)]";
 
@@ -208,7 +211,7 @@ export function StudentApplicationForm({ initialEmail = "" }: { initialEmail?: s
         <p className="mt-4 max-w-sm text-[15px] leading-relaxed text-muted-foreground">
           We got your application and will reach out at <span className="text-foreground">{data.email}</span>.
         </p>
-        <Button asChild variant="outline" className="mt-10">
+        <Button asChild variant="cta" size="lg" className="mt-10 h-12 rounded-xl px-8">
           <Link href="/">Back home</Link>
         </Button>
       </motion.div>
@@ -221,6 +224,48 @@ export function StudentApplicationForm({ initialEmail = "" }: { initialEmail?: s
 
   return (
     <div className="w-full">
+      <div className="fixed inset-x-0 top-0 z-50">
+        <div className="h-[3px] bg-muted" aria-hidden="true">
+          <motion.div
+            className="h-full origin-left bg-cta"
+            initial={false}
+            animate={{ scaleX: (index + 1) / studentQuestions.length }}
+            transition={{ duration: reduce ? 0 : 0.8, ease: easeOutSoft }}
+          />
+        </div>
+        <div
+          role="progressbar"
+          aria-label="Application progress"
+          aria-valuemin={1}
+          aria-valuemax={studentQuestions.length}
+          aria-valuenow={index + 1}
+          className="sr-only"
+        />
+        <nav className="flex h-14 items-center justify-between px-3 sm:px-6">
+          <AnimatePresence initial={false}>
+            {index > 0 ? (
+              <motion.button
+                key="back"
+                type="button"
+                onClick={() => goTo(index - 1)}
+                aria-label="Previous question"
+                initial={{ opacity: 0, x: -6 }}
+                animate={{ opacity: 1, x: 0 }}
+                exit={{ opacity: 0, x: -6 }}
+                transition={{ duration: 0.4, ease: easeOutSoft }}
+                className={iconButton}
+              >
+                <ArrowLeft className="size-[18px]" aria-hidden="true" />
+              </motion.button>
+            ) : (
+              <span key="spacer" className="size-10" />
+            )}
+          </AnimatePresence>
+          <Link href="/" aria-label="Close application" className={iconButton}>
+            <X className="size-[18px]" aria-hidden="true" />
+          </Link>
+        </nav>
+      </div>
       <AnimatePresence mode="wait" initial={false} custom={direction}>
         <motion.form
           key={question.field}
@@ -236,9 +281,6 @@ export function StudentApplicationForm({ initialEmail = "" }: { initialEmail?: s
           }}
           className="flex w-full flex-col items-center text-center"
         >
-          <motion.p variants={child} custom={direction} className="mb-4 text-[13px] tabular-nums text-subtle-foreground">
-            {index + 1} of {studentQuestions.length}
-          </motion.p>
           <motion.h1
             variants={child}
             custom={direction}
@@ -343,7 +385,7 @@ export function StudentApplicationForm({ initialEmail = "" }: { initialEmail?: s
               <Button
                 type="submit"
                 size="lg"
-                variant={optionalEmpty ? "outline" : "cta"}
+                variant="cta"
                 className="mt-1 h-12 w-full rounded-xl"
                 disabled={status === "sending"}
               >
@@ -365,21 +407,6 @@ export function StudentApplicationForm({ initialEmail = "" }: { initialEmail?: s
               </Button>
             </div>
           </motion.div>
-          {index > 0 && (
-            <motion.div variants={child} custom={direction} className="mt-5 flex justify-center">
-              <button
-                type="button"
-                onClick={() => goTo(index - 1)}
-                className="group inline-flex h-10 items-center gap-1.5 rounded-full px-4 text-[14px] text-muted-foreground outline-none transition-colors duration-300 hover:bg-muted hover:text-foreground focus-visible:ring-[3px] focus-visible:ring-ring/50"
-              >
-                <ArrowLeft
-                  className="size-4 transition-transform duration-300 ease-out-soft group-hover:-translate-x-0.5"
-                  aria-hidden="true"
-                />
-                Back
-              </button>
-            </motion.div>
-          )}
         </motion.form>
       </AnimatePresence>
 

@@ -102,7 +102,7 @@ export function StartCard() {
           {error}
         </p>
 
-        <Button type="submit" size="lg" className="mt-1 w-full rounded-xl">
+        <Button type="submit" size="lg" variant="cta" className="mt-1 h-12 w-full rounded-xl">
           Start your application
           <ArrowRight className="transition-transform duration-300 group-hover/button:translate-x-0.5" />
         </Button>
