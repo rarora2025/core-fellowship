@@ -7,19 +7,17 @@ import { ArrowLeft, ArrowRight, Check, FileText, Loader2, Plus, Upload, X } from
 
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { ChipGroup } from "@/components/apply/chip-group";
-import { IconTiles, interestIcons, roleIcons } from "@/components/apply/icon-tiles";
-import { LinkedInInput, MajorPicker } from "@/components/apply/text-pickers";
+import { FuturePicker } from "@/components/apply/future-picker";
+import { LinkedInFinder } from "@/components/apply/linkedin-finder";
+import { MajorPicker } from "@/components/apply/text-pickers";
 import { WheelPicker } from "@/components/apply/wheel-picker";
 import { easeOutSoft } from "@/components/motion/easing";
 import {
   gradYears,
-  interestOptions,
   referralLimits,
   resumeRules,
-  roleOptions,
-  skillSuggestions,
   studentQuestions,
+  type StudentQuestion,
 } from "@/content/student-application";
 import {
   emptyStudentApplication,
@@ -74,6 +72,10 @@ function clearDraft() {
   } catch {}
 }
 
+function fieldsOf(q: StudentQuestion): StudentField[] {
+  return ("fields" in q ? [...q.fields] : [q.field]) as StudentField[];
+}
+
 const iconButton =
   "grid size-10 place-items-center rounded-full text-muted-foreground outline-none transition-colors duration-300 hover:bg-muted hover:text-foreground focus-visible:ring-[3px] focus-visible:ring-ring/50";
 
@@ -112,7 +114,9 @@ export function StudentApplicationForm({ initialEmail = "" }: { initialEmail?: s
     [initialEmail]
   );
   const question = questions[Math.min(index, questions.length - 1)];
-  const field = question.field as StudentField;
+  const field = question.field as StudentField | "future";
+  const fields = fieldsOf(question);
+  const [errorField, setErrorField] = React.useState<StudentField | null>(null);
   const isLast = index >= questions.length - 1;
 
   const set: Setter = React.useCallback((key, value) => {
@@ -122,16 +126,19 @@ export function StudentApplicationForm({ initialEmail = "" }: { initialEmail?: s
 
   function goTo(i: number) {
     setError(null);
+    setErrorField(null);
     setPage(([cur]) => [Math.min(Math.max(i, 0), questions.length - 1), i < cur ? -1 : 1]);
   }
 
   async function submit(final: StudentApplication) {
     const tidy = { ...final, referrals: final.referrals.filter((r) => r.name.trim() || r.email.trim()) };
     const errs = validateStudentApplication(tidy);
-    const firstBad = questions.findIndex((q) => errs[q.field as StudentField]);
+    const firstBad = questions.findIndex((q) => fieldsOf(q).some((f) => errs[f]));
     if (firstBad >= 0) {
+      const f = fieldsOf(questions[firstBad]).find((k) => errs[k])!;
       goTo(firstBad);
-      setError(errs[questions[firstBad].field as StudentField] ?? null);
+      setError(errs[f] ?? null);
+      setErrorField(f);
       return;
     }
     setStatus("sending");
@@ -144,10 +151,12 @@ export function StudentApplicationForm({ initialEmail = "" }: { initialEmail?: s
       const body = await res.json().catch(() => ({}));
       if (res.status === 422 && body.errors) {
         setStatus("idle");
-        const bad = questions.findIndex((q) => body.errors[q.field]);
+        const bad = questions.findIndex((q) => fieldsOf(q).some((f) => body.errors[f]));
         if (bad >= 0) {
+          const f = fieldsOf(questions[bad]).find((k) => body.errors[k])!;
           goTo(bad);
-          setError(body.errors[questions[bad].field]);
+          setError(body.errors[f]);
+          setErrorField(f);
         }
         return;
       }
@@ -160,9 +169,11 @@ export function StudentApplicationForm({ initialEmail = "" }: { initialEmail?: s
   }
 
   function next(current = data) {
-    const errs = validateFields([field], current);
-    if (errs[field]) {
-      setError(errs[field]!);
+    const errs = validateFields(fields, current);
+    const bad = fields.find((f) => errs[f]);
+    if (bad) {
+      setError(errs[bad]!);
+      setErrorField(bad);
       document.getElementById(INPUT_ID)?.focus();
       return;
     }
@@ -305,7 +316,7 @@ export function StudentApplicationForm({ initialEmail = "" }: { initialEmail?: s
             </motion.p>
           )}
 
-          <motion.div variants={child} custom={direction} className={cn(cardClass, "mt-8 text-left sm:mt-9", field === "referrals" ? "max-w-[540px]" : "max-w-[460px]")}>
+          <motion.div variants={child} custom={direction} className={cn(cardClass, "mt-8 text-left sm:mt-9", field === "referrals" || field === "future" ? "max-w-[540px]" : "max-w-[460px]")}>
             <div className="px-2.5 pb-2.5 pt-2.5 sm:px-4 sm:pb-3 sm:pt-4">
               {textField && (
                 <Input
@@ -314,8 +325,8 @@ export function StudentApplicationForm({ initialEmail = "" }: { initialEmail?: s
                   aria-labelledby="question"
                   aria-invalid={!!error}
                   aria-describedby={describedBy}
-                  value={data[field]}
-                  onChange={(e) => set(field, e.target.value)}
+                  value={data[field as "name" | "email"]}
+                  onChange={(e) => set(field as "name" | "email", e.target.value)}
                   enterKeyHint="next"
                   {...(field === "name" && { autoComplete: "name", placeholder: "First and last" })}
                   {...(field === "email" && {
@@ -345,29 +356,25 @@ export function StudentApplicationForm({ initialEmail = "" }: { initialEmail?: s
               )}
 
               {field === "linkedin" && (
-                <LinkedInInput value={data.linkedin} onChange={(v) => set("linkedin", v)} describedBy={describedBy} invalid={!!error} />
-              )}
-
-              {field === "skills" && (
-                <ChipGroup
-                  id={INPUT_ID}
-                  labelledBy="question"
+                <LinkedInFinder
+                  name={data.name}
+                  gradYear={data.gradYear}
+                  major={data.major}
+                  value={data.linkedin}
+                  onChange={(v) => set("linkedin", v)}
                   describedBy={describedBy}
-                  options={skillSuggestions}
-                  value={data.skills}
-                  onChange={(v) => set("skills", v)}
-                  allowCustom
-                  customPlaceholder="Add a skill"
+                  invalid={!!error}
                 />
               )}
 
-              {(field === "interests" || field === "roles") && (
-                <IconTiles
-                  options={field === "interests" ? interestOptions : roleOptions}
-                  icons={field === "interests" ? interestIcons : roleIcons}
-                  value={data[field]}
-                  onChange={(v) => set(field, v)}
+              {field === "future" && (
+                <FuturePicker
+                  skills={data.skills}
+                  interests={data.interests}
+                  roles={data.roles}
+                  onChange={set}
                   describedBy={describedBy}
+                  focusField={errorField}
                 />
               )}
 

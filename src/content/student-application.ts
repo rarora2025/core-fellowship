@@ -5,17 +5,22 @@
 
 /** One question per screen, in this order. */
 export const studentQuestions = [
+  { field: "gradYear", title: "When do you graduate?" },
   { field: "name", title: "What's your name?" },
   { field: "email", title: "What's your Columbia email?" },
-  { field: "gradYear", title: "When do you graduate?" },
   { field: "major", title: "What are you studying?", hint: "Search, or type your own." },
-  { field: "linkedin", title: "Where's your LinkedIn?" },
+  { field: "linkedin", title: "Find your LinkedIn.", hint: "Tap yours, or paste the link." },
   { field: "resume", title: "Add your resume.", hint: "PDF, up to 5 MB." },
-  { field: "skills", title: "What are you good at?", hint: "Pick a few or add your own." },
-  { field: "interests", title: "What spaces are you into?", hint: "Pick as many as you like." },
-  { field: "roles", title: "What kind of role do you want?", hint: "Pick as many as you like." },
+  {
+    field: "future",
+    fields: ["skills", "interests", "roles"],
+    title: "What does your future look like?",
+    hint: "What you're good at, the spaces you like, and the roles you want.",
+  },
   { field: "referrals", title: "Who are the sharpest people you know?", hint: "Up to 5 friends you know well and would vouch for." },
 ] as const;
+
+export type StudentQuestion = (typeof studentQuestions)[number];
 
 // TODO(CORE): confirm which schools count (Barnard, GS, grad schools, etc).
 export const studentEmailDomains = ["columbia.edu"];

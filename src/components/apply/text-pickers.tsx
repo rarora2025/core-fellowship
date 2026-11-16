@@ -93,11 +93,15 @@ export function LinkedInInput({
   onChange,
   describedBy,
   invalid,
+  autoFocus = true,
+  id = "answer",
 }: {
   value: string;
   onChange: (v: string) => void;
   describedBy?: string;
   invalid?: boolean;
+  autoFocus?: boolean;
+  id?: string;
 }) {
   const handle = value ? handleFrom(value) : "";
   return (
@@ -106,8 +110,8 @@ export function LinkedInInput({
         linkedin.com/in/
       </span>
       <input
-        id="answer"
-        autoFocus
+        id={id}
+        autoFocus={autoFocus}
         autoComplete="off"
         autoCapitalize="none"
         spellCheck={false}
