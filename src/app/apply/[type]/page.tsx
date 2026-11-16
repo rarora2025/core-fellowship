@@ -4,10 +4,9 @@ import { ArrowLeft } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
 
-// Temporary stand-in so the hero CTAs don't 404. The real multi-step
-// application flows replace this in a later step.
+// Temporary stand-in until the startup application is built.
+// The student flow lives at /apply/student.
 const flows = {
-  student: "Student application",
   startup: "Startup application",
 } as const;
 
