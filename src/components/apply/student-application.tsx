@@ -9,6 +9,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { ChipGroup } from "@/components/apply/chip-group";
+import { WheelPicker } from "@/components/apply/wheel-picker";
 import { easeOutSoft } from "@/components/motion/easing";
 import {
   gradYears,
@@ -87,7 +88,6 @@ export function StudentApplicationForm({ initialEmail = "" }: { initialEmail?: s
   const [error, setError] = React.useState<string | null>(null);
   const [status, setStatus] = React.useState<"idle" | "sending" | "sent" | "failed">("idle");
   const [hydrated, setHydrated] = React.useState(false);
-  const advanceTimer = React.useRef<number | undefined>(undefined);
 
   React.useEffect(() => {
     const draft = readDraft();
@@ -102,8 +102,6 @@ export function StudentApplicationForm({ initialEmail = "" }: { initialEmail?: s
     if (hydrated && status !== "sent") writeDraft({ data, index });
   }, [data, index, hydrated, status]);
 
-  React.useEffect(() => () => window.clearTimeout(advanceTimer.current), []);
-
   const question = studentQuestions[index];
   const field = question.field as StudentField;
   const isLast = index === studentQuestions.length - 1;
@@ -114,7 +112,6 @@ export function StudentApplicationForm({ initialEmail = "" }: { initialEmail?: s
   }, []);
 
   function goTo(i: number) {
-    window.clearTimeout(advanceTimer.current);
     setError(null);
     setPage(([cur]) => [Math.min(Math.max(i, 0), studentQuestions.length - 1), i < cur ? -1 : 1]);
   }
@@ -222,7 +219,6 @@ export function StudentApplicationForm({ initialEmail = "" }: { initialEmail?: s
 
   const describedBy = error ? `${INPUT_ID}-error` : "hint" in question ? `${INPUT_ID}-hint` : undefined;
   const textField = field === "name" || field === "email" || field === "major" || field === "linkedin";
-  const autoAdvance = field === "gradYear";
   const optionalEmpty = field === "note" && !data.note.trim();
 
   return (
@@ -295,19 +291,14 @@ export function StudentApplicationForm({ initialEmail = "" }: { initialEmail?: s
               )}
 
               {field === "gradYear" && (
-                <ChipGroup
+                <WheelPicker
                   id={INPUT_ID}
-                  single
                   labelledBy="question"
                   describedBy={describedBy}
                   options={gradYears}
-                  value={data.gradYear ? [data.gradYear] : []}
-                  onChange={([v]) => {
-                    const updated = { ...data, gradYear: v };
-                    set("gradYear", v);
-                    window.clearTimeout(advanceTimer.current);
-                    advanceTimer.current = window.setTimeout(() => next(updated), reduce ? 0 : 420);
-                  }}
+                  value={data.gradYear}
+                  defaultIndex={1}
+                  onChange={(v) => set("gradYear", v)}
                 />
               )}
 
@@ -351,31 +342,29 @@ export function StudentApplicationForm({ initialEmail = "" }: { initialEmail?: s
                 {error ?? (status === "failed" ? "That didn't go through. Your answers are still here, so try again." : null)}
               </p>
 
-              {!autoAdvance && (
-                <Button
-                  type="submit"
-                  size="lg"
-                  variant={optionalEmpty ? "outline" : "cta"}
-                  className="mt-1 h-12 w-full rounded-xl"
-                  disabled={status === "sending"}
-                >
-                  {status === "sending" ? (
-                    <>
-                      <Loader2 className="animate-spin" />
-                      Sending
-                    </>
-                  ) : isLast ? (
-                    "Submit application"
-                  ) : optionalEmpty ? (
-                    "Skip"
-                  ) : (
-                    <>
-                      Continue
-                      <ArrowRight className="transition-transform duration-300 group-hover/button:translate-x-0.5" />
-                    </>
-                  )}
-                </Button>
-              )}
+              <Button
+                type="submit"
+                size="lg"
+                variant={optionalEmpty ? "outline" : "cta"}
+                className="mt-1 h-12 w-full rounded-xl"
+                disabled={status === "sending"}
+              >
+                {status === "sending" ? (
+                  <>
+                    <Loader2 className="animate-spin" />
+                    Sending
+                  </>
+                ) : isLast ? (
+                  "Submit application"
+                ) : optionalEmpty ? (
+                  "Skip"
+                ) : (
+                  <>
+                    Continue
+                    <ArrowRight className="transition-transform duration-300 group-hover/button:translate-x-0.5" />
+                  </>
+                )}
+              </Button>
             </div>
           </motion.div>
           {index > 0 && (
@@ -569,6 +558,232 @@ function ResumeUpload({
 
 /* ------------------------------------------------------------------ */
 
+const EMAIL_SHAPE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+
+type EmailCheck =
+  | { state: "checking" }
+  | { state: "ok"; suggestion: string | null }
+  | { state: "bad"; suggestion: string | null };
+
+function initials(name: string) {
+  const parts = name.trim().split(/\s+/).filter(Boolean);
+  return ((parts[0]?.[0] ?? "") + (parts.length > 1 ? parts[parts.length - 1][0] : "")).toUpperCase();
+}
+
+async function sha256(text: string) {
+  const buf = await crypto.subtle.digest("SHA-256", new TextEncoder().encode(text));
+  return Array.from(new Uint8Array(buf), (b) => b.toString(16).padStart(2, "0")).join("");
+}
+
+/** Gravatar photo when the person has one, otherwise their initials. */
+function Avatar({ name, email, index }: { name: string; email: string; index: number }) {
+  const [src, setSrc] = React.useState<string | null>(null);
+  const [loaded, setLoaded] = React.useState(false);
+
+  React.useEffect(() => {
+    let alive = true;
+    setLoaded(false);
+    const clean = email.trim().toLowerCase();
+    if (!EMAIL_SHAPE.test(clean) || !globalThis.crypto?.subtle) {
+      setSrc(null);
+      return;
+    }
+    const t = window.setTimeout(async () => {
+      const hash = await sha256(clean);
+      if (alive) setSrc(`https://gravatar.com/avatar/${hash}?s=96&d=404`);
+    }, 500);
+    return () => {
+      alive = false;
+      window.clearTimeout(t);
+    };
+  }, [email]);
+
+  const letters = initials(name);
+  return (
+    <span className="relative mt-1.5 grid size-9 shrink-0 place-items-center overflow-hidden rounded-full bg-cta text-[13px] font-semibold text-cta-foreground">
+      <AnimatePresence mode="popLayout" initial={false}>
+        <motion.span
+          key={letters || index}
+          initial={{ opacity: 0, scale: 0.6 }}
+          animate={{ opacity: 1, scale: 1 }}
+          exit={{ opacity: 0, scale: 0.6 }}
+          transition={{ duration: 0.35, ease: easeOutSoft }}
+          className="tabular-nums"
+        >
+          {letters || index + 1}
+        </motion.span>
+      </AnimatePresence>
+      {src && (
+        // eslint-disable-next-line @next/next/no-img-element
+        <img
+          src={src}
+          alt=""
+          onLoad={() => setLoaded(true)}
+          onError={() => setSrc(null)}
+          className={cn(
+            "absolute inset-0 size-full object-cover transition-opacity duration-500",
+            loaded ? "opacity-100" : "opacity-0"
+          )}
+        />
+      )}
+    </span>
+  );
+}
+
+/** Checks an email as it's typed: domain receives mail, and common typos. */
+function useEmailCheck(email: string) {
+  const [check, setCheck] = React.useState<EmailCheck | null>(null);
+  React.useEffect(() => {
+    const clean = email.trim();
+    if (!EMAIL_SHAPE.test(clean)) {
+      setCheck(null);
+      return;
+    }
+    const ctrl = new AbortController();
+    setCheck({ state: "checking" });
+    const t = window.setTimeout(async () => {
+      try {
+        const res = await fetch("/api/verify-email", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ email: clean }),
+          signal: ctrl.signal,
+        });
+        const body = (await res.json()) as { deliverable: boolean; suggestion: string | null };
+        setCheck({ state: body.deliverable ? "ok" : "bad", suggestion: body.suggestion });
+      } catch {
+        if (!ctrl.signal.aborted) setCheck(null);
+      }
+    }, 550);
+    return () => {
+      ctrl.abort();
+      window.clearTimeout(t);
+    };
+  }, [email]);
+  return check;
+}
+
+function ReferralRow({
+  index,
+  value,
+  onChange,
+  onRemove,
+  onEnterLast,
+  nameRef,
+}: {
+  index: number;
+  value: Referral;
+  onChange: (patch: Partial<Referral>) => void;
+  onRemove?: () => void;
+  onEnterLast?: () => void;
+  nameRef?: React.Ref<HTMLInputElement>;
+}) {
+  const check = useEmailCheck(value.email);
+  const suggestion = check && check.state !== "checking" ? check.suggestion : null;
+
+  return (
+    <div className="rounded-xl bg-muted/60 p-2">
+      <div className="flex items-start gap-2.5 sm:gap-3">
+        <Avatar name={value.name} email={value.email} index={index} />
+        <div className="grid min-w-0 flex-1 gap-2 sm:grid-cols-2">
+          <Input
+            ref={nameRef}
+            id={index === 0 ? INPUT_ID : undefined}
+            autoFocus={index === 0 && !value.name}
+            aria-label={`Person ${index + 1} name`}
+            placeholder="Name"
+            autoComplete="off"
+            value={value.name}
+            onChange={(e) => onChange({ name: e.target.value })}
+            className="h-11 bg-card"
+          />
+          <div className="relative">
+            <Input
+              aria-label={`Person ${index + 1} email`}
+              type="email"
+              inputMode="email"
+              autoCapitalize="none"
+              autoComplete="off"
+              placeholder="Email"
+              value={value.email}
+              aria-invalid={check?.state === "bad" || undefined}
+              onChange={(e) => onChange({ email: e.target.value })}
+              onKeyDown={(e) => {
+                if (e.key === "Enter" && onEnterLast && value.name && value.email) {
+                  e.preventDefault();
+                  onEnterLast();
+                }
+              }}
+              className="h-11 bg-card pr-9"
+            />
+            <span className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2">
+              <AnimatePresence mode="wait" initial={false}>
+                {check?.state === "checking" && (
+                  <motion.span key="c" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}>
+                    <Loader2 className="size-4 animate-spin text-subtle-foreground" aria-hidden="true" />
+                  </motion.span>
+                )}
+                {check?.state === "ok" && !suggestion && (
+                  <motion.span
+                    key="ok"
+                    initial={{ opacity: 0, scale: 0.5 }}
+                    animate={{ opacity: 1, scale: 1 }}
+                    exit={{ opacity: 0 }}
+                    transition={{ duration: 0.4, ease: easeOutSoft }}
+                  >
+                    <Check className="size-4 text-cta" aria-label="Email looks good" />
+                  </motion.span>
+                )}
+              </AnimatePresence>
+            </span>
+          </div>
+        </div>
+        {onRemove && (
+          <button
+            type="button"
+            aria-label={`Remove person ${index + 1}`}
+            onClick={onRemove}
+            className="mt-1.5 grid size-8 shrink-0 place-items-center rounded-full text-muted-foreground transition-colors hover:bg-card hover:text-foreground"
+          >
+            <X className="size-4" />
+          </button>
+        )}
+      </div>
+
+      <AnimatePresence initial={false}>
+        {(suggestion || check?.state === "bad") && (
+          <motion.p
+            initial={{ opacity: 0, height: 0 }}
+            animate={{ opacity: 1, height: "auto" }}
+            exit={{ opacity: 0, height: 0 }}
+            transition={{ duration: 0.4, ease: easeOutSoft }}
+            className="overflow-hidden pl-12 text-[13px] sm:pl-[52px]"
+            aria-live="polite"
+          >
+            <span className="block pb-1 pt-2">
+              {suggestion ? (
+                <>
+                  <span className="text-muted-foreground">Did you mean </span>
+                  <button
+                    type="button"
+                    onClick={() => onChange({ email: suggestion })}
+                    className="font-medium text-cta underline-offset-4 hover:underline"
+                  >
+                    {suggestion}
+                  </button>
+                  <span className="text-muted-foreground">?</span>
+                </>
+              ) : (
+                <span className="text-destructive">That email domain can&apos;t receive mail.</span>
+              )}
+            </span>
+          </motion.p>
+        )}
+      </AnimatePresence>
+    </div>
+  );
+}
+
 function Referrals({
   value,
   onChange,
@@ -590,10 +805,6 @@ function Referrals({
     }
   }, [focusNew, rows.length]);
 
-  function update(i: number, patch: Partial<Referral>) {
-    onChange(rows.map((r, j) => (j === i ? { ...r, ...patch } : r)));
-  }
-
   function add() {
     if (!canAdd) return;
     onChange([...rows, { name: "", email: "" }]);
@@ -614,51 +825,14 @@ function Referrals({
               transition={{ duration: 0.55, ease: easeOutSoft }}
               className="overflow-hidden"
             >
-              <div className="flex items-start gap-2.5 rounded-xl bg-muted/60 p-2 sm:gap-3">
-                <span className="mt-3 grid size-6 shrink-0 place-items-center rounded-full bg-cta text-[12px] font-semibold tabular-nums text-cta-foreground">
-                  {i + 1}
-                </span>
-                <div className="grid min-w-0 flex-1 gap-2 sm:grid-cols-2">
-                  <Input
-                    ref={i === rows.length - 1 ? lastNameRef : undefined}
-                    id={i === 0 ? INPUT_ID : undefined}
-                    autoFocus={i === 0 && !r.name}
-                    aria-label={`Person ${i + 1} name`}
-                    placeholder="Name"
-                    autoComplete="off"
-                    value={r.name}
-                    onChange={(e) => update(i, { name: e.target.value })}
-                    className="h-11 bg-card"
-                  />
-                  <Input
-                    aria-label={`Person ${i + 1} email`}
-                    type="email"
-                    inputMode="email"
-                    autoCapitalize="none"
-                    autoComplete="off"
-                    placeholder="Email"
-                    value={r.email}
-                    onChange={(e) => update(i, { email: e.target.value })}
-                    onKeyDown={(e) => {
-                      if (e.key === "Enter" && i === rows.length - 1 && canAdd && r.name && r.email) {
-                        e.preventDefault();
-                        add();
-                      }
-                    }}
-                    className="h-11 bg-card"
-                  />
-                </div>
-                {rows.length > 1 && (
-                  <button
-                    type="button"
-                    aria-label={`Remove person ${i + 1}`}
-                    onClick={() => onChange(rows.filter((_, j) => j !== i))}
-                    className="mt-2 grid size-8 shrink-0 place-items-center rounded-full text-muted-foreground transition-colors hover:bg-card hover:text-foreground"
-                  >
-                    <X className="size-4" />
-                  </button>
-                )}
-              </div>
+              <ReferralRow
+                index={i}
+                value={r}
+                nameRef={i === rows.length - 1 ? lastNameRef : undefined}
+                onChange={(patch) => onChange(rows.map((row, j) => (j === i ? { ...row, ...patch } : row)))}
+                onRemove={rows.length > 1 ? () => onChange(rows.filter((_, j) => j !== i)) : undefined}
+                onEnterLast={i === rows.length - 1 && canAdd ? add : undefined}
+              />
             </motion.li>
           ))}
         </AnimatePresence>

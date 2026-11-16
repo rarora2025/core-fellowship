@@ -22,7 +22,7 @@ export const studentQuestions = [
 export const studentEmailDomains = ["columbia.edu"];
 
 // TODO(CORE): confirm which class years are eligible.
-export const gradYears = ["2027", "2028", "2029", "2030", "Graduate student"];
+export const gradYears = ["2026", "2027", "2028", "2029", "2030", "Grad student"];
 
 export const skillSuggestions = [
   "Python",

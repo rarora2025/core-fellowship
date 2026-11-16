@@ -104,6 +104,9 @@ function checkField(field: StudentField, a: StudentApplication): string | undefi
       if (filled.length > referralLimits.max) return `Up to ${referralLimits.max} people.`;
       const bad = filled.findIndex((r) => !r.name.trim() || !EMAIL.test(r.email.trim()));
       if (bad >= 0) return `Add a name and a valid email for person ${bad + 1}.`;
+      const emails = filled.map((r) => r.email.trim().toLowerCase());
+      if (emails.includes(a.email.trim().toLowerCase())) return "That's your own email. Add someone else.";
+      if (new Set(emails).size !== emails.length) return "Each person needs a different email.";
       return undefined;
     }
   }
