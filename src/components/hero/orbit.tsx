@@ -2,17 +2,17 @@
 
 import * as React from "react";
 import Image from "next/image";
-import { motion, useAnimate, useReducedMotion } from "framer-motion";
+import { AnimatePresence, motion, useReducedMotion } from "framer-motion";
 
 import { ringSizes, startups } from "@/content/orbit";
 
-const FLIP_EVERY_MS = 1700;
+const SWAP_EVERY_MS = 2400;
 const START_AFTER_MS = 3200;
 
 /**
  * Two rings of logo circles slowly turning around the hero, in opposite
  * directions. Each circle counter-rotates so it stays upright. Every so often
- * one circle flips over and comes back showing a different startup.
+ * one circle softly fades to a different startup.
  */
 export function Orbit() {
   const reduce = useReducedMotion();
@@ -25,7 +25,7 @@ export function Orbit() {
   React.useEffect(() => {
     if (reduce || spare.current.length === 0) return;
     let step = 0;
-    // Visit slots alternating between rings so flips feel spread out.
+    // Visit slots alternating between rings so swaps feel spread out.
     const order = Array.from({ length: slotCount }, (_, i) =>
       i % 2 === 0 ? Math.floor(i / 2) : ringSizes.inner + Math.floor(i / 2)
     ).filter((v, i, a) => v < slotCount && a.indexOf(v) === i);
@@ -41,7 +41,7 @@ export function Orbit() {
           next[slot] = incoming;
           return next;
         });
-      }, FLIP_EVERY_MS);
+      }, SWAP_EVERY_MS);
     }, START_AFTER_MS);
     return () => {
       window.clearTimeout(start);
@@ -112,44 +112,41 @@ function Ring({
   );
 }
 
+const fitByLogo = new Map(startups.map((s) => [s.logo, s.fit ?? "cover"]));
+
 /**
- * One circle. When its logo changes it turns edge-on, swaps the image while
- * invisible, and turns back. The whole circle rotates (border and all), so it
- * stays perfectly round through the flip.
+ * One circle. When its logo changes, the new one cross-fades in over the old.
+ * Logos marked "contain" get padding so the round edge never crops them.
  */
 function LogoCoin({ logo, delay }: { logo: string; delay: number }) {
   const reduce = useReducedMotion();
-  const [scope, animate] = useAnimate();
-  const [current, setCurrent] = React.useState(logo);
-
-  React.useEffect(() => {
-    if (logo === current) return;
-    let cancelled = false;
-    (async () => {
-      await animate(scope.current, { rotateY: 90 }, { duration: 0.32, ease: [0.55, 0, 1, 0.45] });
-      if (cancelled) return;
-      setCurrent(logo);
-      await animate(scope.current, { rotateY: [-90, 0] }, { duration: 0.42, ease: [0, 0.55, 0.45, 1] });
-    })();
-    return () => {
-      cancelled = true;
-    };
-  }, [logo, current, animate, scope]);
-
   return (
-    <div className="-translate-x-1/2 -translate-y-1/2 [perspective:500px]">
+    <div className="-translate-x-1/2 -translate-y-1/2">
       <motion.div
         initial={{ opacity: 0, scale: reduce ? 1 : 0.6 }}
         animate={{ opacity: 1, scale: 1 }}
         transition={{ duration: 1.2, ease: [0.22, 1, 0.36, 1], delay: reduce ? 0 : delay }}
+        className="relative overflow-hidden rounded-full border border-border bg-white shadow-[0_8px_24px_-12px_rgb(var(--shadow-color)/0.25)]"
+        style={{ width: "var(--orb)", height: "var(--orb)" }}
       >
-        <div
-          ref={scope}
-          className="overflow-hidden rounded-full border border-border bg-white shadow-[0_8px_24px_-12px_rgb(var(--shadow-color)/0.25)] [backface-visibility:hidden]"
-          style={{ width: "var(--orb)", height: "var(--orb)" }}
-        >
-          <Image src={current} alt="" width={128} height={128} className="size-full rounded-full object-cover" />
-        </div>
+        <AnimatePresence initial={false}>
+          <motion.div
+            key={logo}
+            initial={{ opacity: 0, scale: 0.92 }}
+            animate={{ opacity: 1, scale: 1 }}
+            exit={{ opacity: 0 }}
+            transition={{ duration: 0.9, ease: [0.22, 1, 0.36, 1] }}
+            className={"absolute inset-0 " + (fitByLogo.get(logo) === "contain" ? "p-[16%]" : "")}
+          >
+            <Image
+              src={logo}
+              alt=""
+              width={128}
+              height={128}
+              className={"size-full " + (fitByLogo.get(logo) === "contain" ? "object-contain" : "rounded-full object-cover")}
+            />
+          </motion.div>
+        </AnimatePresence>
       </motion.div>
     </div>
   );
