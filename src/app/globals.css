@@ -24,6 +24,8 @@
   --brand: #54a1ff;           /* CORE logo blue */
   --brand-deep: #2f7fe0;      /* logo blue, darkened for text on white */
   --brand-logo: #3b8ff5;      /* logo blue for large display type (3:1+ on white) */
+  --cta: #2a74d8;             /* filled buttons in the application */
+  --cta-foreground: #ffffff;
   --columbia: #b9d9eb;        /* the official light Columbia blue */
   --columbia-soft: #eaf4fa;   /* washes and glows */
   --columbia-deep: #2a5d8f;   /* accessible accent text on white */
@@ -59,6 +61,8 @@
 
   --brand-deep: #74b4ff;      /* lighter so it reads on dark */
   --brand-logo: #54a1ff;
+  --cta: #54a1ff;
+  --cta-foreground: #0b0d12;
   --columbia-soft: #13263b;
   --columbia-deep: #8cc0f0;
   --columbia-ink: #d6e8ff;
@@ -105,6 +109,8 @@
   --color-brand: var(--brand);
   --color-brand-deep: var(--brand-deep);
   --color-brand-logo: var(--brand-logo);
+  --color-cta: var(--cta);
+  --color-cta-foreground: var(--cta-foreground);
   --color-marker: var(--marker);
   --color-columbia: var(--columbia);
   --color-columbia-soft: var(--columbia-soft);
@@ -159,3 +165,15 @@
   }
 }
 
+
+/* Soft color wash behind the application card. */
+@keyframes glow-drift {
+  0%, 100% { transform: translate3d(-6%, 0, 0) scale(1); opacity: 0.9; }
+  50% { transform: translate3d(6%, -4%, 0) scale(1.08); opacity: 1; }
+}
+.apply-glow {
+  animation: glow-drift 18s ease-in-out infinite;
+}
+@media (prefers-reduced-motion: reduce) {
+  .apply-glow { animation: none; }
+}

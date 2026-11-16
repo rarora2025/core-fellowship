@@ -3,12 +3,15 @@
  * (client) and the API route (server), so the rules live in one place.
  */
 import {
-  lookingForMax,
+  noteMax,
+  referralLimits,
   resumeRules,
   studentEmailDomains,
 } from "@/content/student-application";
 
-export type ResumeMeta = { name: string; size: number; type: string };
+export type Referral = { name: string; email: string };
+
+export type ResumeMeta = { id?: string; name: string; size: number; type: string; pages?: number };
 
 export type StudentApplication = {
   name: string;
@@ -20,7 +23,8 @@ export type StudentApplication = {
   skills: string[];
   interests: string[];
   roles: string[];
-  lookingFor: string;
+  note: string;
+  referrals: Referral[];
 };
 
 export type StudentField = keyof StudentApplication;
@@ -36,11 +40,12 @@ export const emptyStudentApplication: StudentApplication = {
   skills: [],
   interests: [],
   roles: [],
-  lookingFor: "",
+  note: "",
+  referrals: [],
 };
 
 export const studentFields: StudentField[] = [
-  "name", "email", "gradYear", "major", "linkedin", "resume", "skills", "interests", "roles", "lookingFor",
+  "name", "email", "gradYear", "major", "linkedin", "resume", "skills", "interests", "roles", "note", "referrals",
 ];
 
 const EMAIL = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
@@ -82,7 +87,7 @@ function checkField(field: StudentField, a: StudentApplication): string | undefi
       if (!a.linkedin.trim()) return "Add your LinkedIn profile.";
       return isLinkedInUrl(a.linkedin) ? undefined : "That doesn't look like a LinkedIn profile link.";
     case "resume":
-      if (!a.resume) return undefined;
+      if (!a.resume) return "Upload your resume to continue.";
       if (!resumeRules.types.includes(a.resume.type)) return "Resumes need to be a PDF.";
       return a.resume.size <= resumeRules.maxBytes ? undefined : "That file is over 5 MB.";
     case "skills":
@@ -91,9 +96,16 @@ function checkField(field: StudentField, a: StudentApplication): string | undefi
       return a.interests.length ? undefined : "Pick at least one area.";
     case "roles":
       return a.roles.length ? undefined : "Pick at least one kind of role.";
-    case "lookingFor":
-      if (!a.lookingFor.trim()) return "Tell us a little about what you're looking for.";
-      return a.lookingFor.length <= lookingForMax ? undefined : `Keep it under ${lookingForMax} characters.`;
+    case "note":
+      return a.note.length <= noteMax ? undefined : `Keep it under ${noteMax} characters.`;
+    case "referrals": {
+      const filled = a.referrals.filter((r) => r.name.trim() || r.email.trim());
+      if (filled.length < referralLimits.min) return "Add at least one person.";
+      if (filled.length > referralLimits.max) return `Up to ${referralLimits.max} people.`;
+      const bad = filled.findIndex((r) => !r.name.trim() || !EMAIL.test(r.email.trim()));
+      if (bad >= 0) return `Add a name and a valid email for person ${bad + 1}.`;
+      return undefined;
+    }
   }
 }
 

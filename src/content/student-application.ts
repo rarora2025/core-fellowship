@@ -10,11 +10,12 @@ export const studentQuestions = [
   { field: "gradYear", title: "When do you graduate?" },
   { field: "major", title: "What are you studying?" },
   { field: "linkedin", title: "Where's your LinkedIn?" },
-  { field: "resume", title: "Got a resume?", hint: "Optional. PDF, up to 5 MB." },
+  { field: "resume", title: "Add your resume.", hint: "PDF, up to 5 MB." },
   { field: "skills", title: "What are you good at?", hint: "Pick a few or add your own." },
   { field: "interests", title: "What spaces are you into?" },
   { field: "roles", title: "What kind of role do you want?" },
-  { field: "lookingFor", title: "What are you hoping to find?", hint: "An internship, part time work, something to learn. Whatever's true." },
+  { field: "note", title: "Anything else we should know?", hint: "Optional." },
+  { field: "referrals", title: "Who are the sharpest people you know?", hint: "Up to 5 friends you know well and would vouch for." },
 ] as const;
 
 // TODO(CORE): confirm which schools count (Barnard, GS, grad schools, etc).
@@ -71,4 +72,6 @@ export const resumeRules = {
   label: "PDF, up to 5 MB",
 };
 
-export const lookingForMax = 800;
+export const noteMax = 600;
+
+export const referralLimits = { min: 1, max: 5 };

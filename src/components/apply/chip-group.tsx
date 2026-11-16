@@ -1,7 +1,10 @@
 "use client";
 
 import * as React from "react";
+import { motion, useReducedMotion } from "framer-motion";
 import { Check, Plus } from "lucide-react";
+
+import { easeOutSoft } from "@/components/motion/easing";
 
 import { cn } from "@/lib/utils";
 
@@ -33,6 +36,7 @@ export function ChipGroup({
   single?: boolean;
   labelledBy?: string;
 }) {
+  const reduce = !!useReducedMotion();
   const [draft, setDraft] = React.useState("");
   const custom = value.filter((v) => !options.includes(v));
   const all = [...options, ...custom];
@@ -63,16 +67,20 @@ export function ChipGroup({
       aria-describedby={describedBy}
       className="flex flex-wrap justify-center gap-2 outline-none"
     >
-      {all.map((option) => {
+      {all.map((option, i) => {
         const on = value.includes(option);
         return (
-          <button
+          <motion.button
             key={option}
+            initial={reduce ? false : { opacity: 0, y: 8 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.6, ease: easeOutSoft, delay: 0.25 + i * 0.035 }}
+            whileTap={{ scale: 0.96 }}
             type="button"
             aria-pressed={on}
             onClick={() => toggle(option)}
             className={cn(
-              "inline-flex h-9 items-center gap-1.5 rounded-full border px-3.5 text-[13.5px] outline-none transition-[background-color,border-color,color] duration-300",
+              "inline-flex h-10 items-center gap-1.5 rounded-full border px-4 text-[14px] sm:h-9 sm:px-3.5 sm:text-[13.5px] outline-none transition-[background-color,border-color,color] duration-300",
               "focus-visible:ring-[3px] focus-visible:ring-ring/50",
               on
                 ? "border-columbia-deep/40 bg-columbia-soft text-columbia-ink dark:border-brand-deep/50 dark:bg-brand/15 dark:text-foreground"
@@ -82,12 +90,12 @@ export function ChipGroup({
           >
             {on && <Check className="size-3.5" aria-hidden="true" />}
             {option}
-          </button>
+          </motion.button>
         );
       })}
 
       {allowCustom && (
-        <span className="inline-flex h-9 items-center rounded-full border border-dashed border-input pl-3.5 pr-1 focus-within:border-columbia-deep/60">
+        <span className="inline-flex h-10 items-center rounded-full border border-dashed sm:h-9 border-input pl-3.5 pr-1 focus-within:border-columbia-deep/60">
           <input
             value={draft}
             onChange={(e) => setDraft(e.target.value)}
@@ -100,7 +108,7 @@ export function ChipGroup({
             placeholder={customPlaceholder}
             aria-label={customPlaceholder}
             maxLength={40}
-            className="w-28 bg-transparent text-[13.5px] text-foreground outline-none placeholder:text-subtle-foreground"
+            className="w-28 bg-transparent text-base sm:text-[13.5px] text-foreground outline-none placeholder:text-subtle-foreground"
           />
           <button
             type="button"
