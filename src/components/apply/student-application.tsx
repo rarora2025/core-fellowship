@@ -167,24 +167,22 @@ export function StudentApplicationForm({ initialEmail = "" }: { initialEmail?: s
   }
 
   const variants: Variants = {
-    enter: (dir: number) => ({ opacity: 0, y: reduce ? 0 : dir * 28, filter: reduce ? "none" : "blur(6px)" }),
+    enter: (dir: number) => ({ opacity: 0, y: reduce ? 0 : dir * 24 }),
     center: {
       opacity: 1,
       y: 0,
-      filter: "blur(0px)",
-      transition: { duration: reduce ? 0.2 : 0.9, ease: easeOutSoft, staggerChildren: reduce ? 0 : 0.09 },
+      transition: { duration: reduce ? 0.2 : 0.7, ease: easeOutSoft, staggerChildren: reduce ? 0 : 0.06 },
     },
     exit: (dir: number) => ({
       opacity: 0,
       y: reduce ? 0 : dir * -18,
-      filter: reduce ? "none" : "blur(4px)",
-      transition: { duration: reduce ? 0.1 : 0.32, ease: [0.4, 0, 1, 1] },
+      transition: { duration: reduce ? 0.1 : 0.2, ease: [0.4, 0, 1, 1] },
     }),
   };
   const child: Variants = {
     enter: (dir: number) => ({ opacity: 0, y: reduce ? 0 : dir * 14 }),
-    center: { opacity: 1, y: 0, transition: { duration: reduce ? 0.2 : 0.9, ease: easeOutSoft } },
-    exit: { opacity: 0, transition: { duration: 0.2 } },
+    center: { opacity: 1, y: 0, transition: { duration: reduce ? 0.2 : 0.75, ease: easeOutSoft } },
+    exit: { opacity: 0, transition: { duration: 0.15 } },
   };
 
   if (status === "sent") {
