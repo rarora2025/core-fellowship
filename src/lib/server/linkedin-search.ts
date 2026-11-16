@@ -59,20 +59,42 @@ function decodeEntities(s: string) {
     .trim();
 }
 
+const BROWSER_UA =
+  "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0 Safari/537.36";
+
+/** Reads Bing's results page. Used when DuckDuckGo is rate limiting. */
+async function bingResults(q: string): Promise<Raw[]> {
+  const res = await fetch(`https://www.bing.com/search?count=15&setlang=en-US&q=${encodeURIComponent(q)}`, {
+    headers: { "User-Agent": BROWSER_UA, Accept: "text/html", "Accept-Language": "en-US,en;q=0.9" },
+    signal: AbortSignal.timeout(7000),
+  });
+  if (res.status !== 200) return [];
+  const html = await res.text();
+  const out: Raw[] = [];
+  const blocks = html.split('<li class="b_algo"').slice(1, 13);
+  for (const b of blocks) {
+    const a = b.match(/<h2[^>]*>\s*<a[^>]+href="([^"]+)"[^>]*>([\s\S]*?)<\/a>/);
+    if (!a) continue;
+    const p = b.match(/<p[^>]*>([\s\S]*?)<\/p>/);
+    out.push({ url: decodeEntities(a[1]), title: decodeEntities(a[2]), description: decodeEntities(p?.[1] ?? "") });
+  }
+  return out;
+}
+
 /** Reads DuckDuckGo's no-JavaScript results page. */
 async function duckDuckGoResults(q: string): Promise<Raw[]> {
   const res = await fetch("https://html.duckduckgo.com/html/", {
     method: "POST",
     headers: {
       "Content-Type": "application/x-www-form-urlencoded",
-      "User-Agent":
-        "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0 Safari/537.36",
+      "User-Agent": BROWSER_UA,
       Accept: "text/html",
     },
     body: new URLSearchParams({ q, kl: "us-en" }).toString(),
     signal: AbortSignal.timeout(7000),
   });
-  if (!res.ok) return [];
+  // DuckDuckGo answers 202 with a challenge page when it's rate limiting.
+  if (res.status !== 200) return [];
   const html = await res.text();
   const out: Raw[] = [];
   const link = /<a[^>]+class="result__a"[^>]+href="([^"]+)"[^>]*>([\s\S]*?)<\/a>/g;
@@ -121,9 +143,12 @@ export async function searchLinkedIn({ name, gradYear, major }: Query): Promise<
 
   const q = `site:linkedin.com/in "${name.trim()}" Columbia ${major ?? ""}`.trim();
   const apiKey = process.env.BRAVE_SEARCH_API_KEY;
-  let raw = apiKey ? await braveResults(q, apiKey) : await duckDuckGoResults(q);
-  // A looser second try if the strict query finds nothing.
-  if (!raw.length && !apiKey) raw = await duckDuckGoResults(`${name.trim()} Columbia University linkedin`);
+  let raw: Raw[] = [];
+  if (apiKey) raw = await braveResults(q, apiKey).catch(() => []);
+  if (!raw.length) raw = await duckDuckGoResults(q).catch(() => []);
+  if (!raw.length) raw = await bingResults(q).catch(() => []);
+  // A looser try if the strict query finds nothing.
+  if (!raw.length) raw = await bingResults(`${name.trim()} Columbia University linkedin`).catch(() => []);
 
   const want = name.trim().toLowerCase().split(/\s+/);
   const seen = new Set<string>();
@@ -148,6 +173,6 @@ export async function searchLinkedIn({ name, gradYear, major }: Query): Promise<
     .sort((a, b) => b.score - a.score)
     .slice(0, 3)
     .map(({ url, name, headline, photo }) => ({ url, name, headline, photo }));
-  cache.set(key, { at: Date.now(), results });
+  if (results.length) cache.set(key, { at: Date.now(), results });
   return results;
 }
