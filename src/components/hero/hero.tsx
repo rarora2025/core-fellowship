@@ -3,7 +3,6 @@
 import { motion, useReducedMotion } from "framer-motion";
 
 import { StartCard } from "@/components/hero/start-card";
-import { Orbit } from "@/components/hero/orbit";
 import { Circle, Marker, Note, Underline } from "@/components/hero/hand-drawn";
 import type { Accent } from "@/components/hero/accents";
 import { CoreWord } from "@/components/hero/core-word";
@@ -27,7 +26,6 @@ export function Hero({ accent = "marker" }: { accent?: Accent }) {
       aria-labelledby="hero-heading"
       className="relative isolate flex min-h-[100svh] flex-col items-center justify-center overflow-hidden px-5 pb-16 pt-28 sm:px-8"
     >
-      <Orbit />
       <div className="flex w-full max-w-[720px] flex-col items-center text-center">
         <motion.h1
           id="hero-heading"
