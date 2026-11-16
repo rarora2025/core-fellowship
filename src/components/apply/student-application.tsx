@@ -7,14 +7,14 @@ import { ArrowLeft, ArrowRight, Check, FileText, Loader2, Plus, Upload, X } from
 
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Textarea } from "@/components/ui/textarea";
 import { ChipGroup } from "@/components/apply/chip-group";
+import { IconTiles, interestIcons, roleIcons } from "@/components/apply/icon-tiles";
+import { LinkedInInput, MajorPicker } from "@/components/apply/text-pickers";
 import { WheelPicker } from "@/components/apply/wheel-picker";
 import { easeOutSoft } from "@/components/motion/easing";
 import {
   gradYears,
   interestOptions,
-  noteMax,
   referralLimits,
   resumeRules,
   roleOptions,
@@ -23,6 +23,7 @@ import {
 } from "@/content/student-application";
 import {
   emptyStudentApplication,
+  isSchoolEmail,
   normalizeLinkedIn,
   validateFields,
   validateStudentApplication,
@@ -105,9 +106,14 @@ export function StudentApplicationForm({ initialEmail = "" }: { initialEmail?: s
     if (hydrated && status !== "sent") writeDraft({ data, index });
   }, [data, index, hydrated, status]);
 
-  const question = studentQuestions[index];
+  // Skip the email question when the homepage already gave us a school email.
+  const questions = React.useMemo(
+    () => (isSchoolEmail(initialEmail) ? studentQuestions.filter((q) => q.field !== "email") : studentQuestions),
+    [initialEmail]
+  );
+  const question = questions[Math.min(index, questions.length - 1)];
   const field = question.field as StudentField;
-  const isLast = index === studentQuestions.length - 1;
+  const isLast = index >= questions.length - 1;
 
   const set: Setter = React.useCallback((key, value) => {
     setData((d) => ({ ...d, [key]: value }));
@@ -116,16 +122,16 @@ export function StudentApplicationForm({ initialEmail = "" }: { initialEmail?: s
 
   function goTo(i: number) {
     setError(null);
-    setPage(([cur]) => [Math.min(Math.max(i, 0), studentQuestions.length - 1), i < cur ? -1 : 1]);
+    setPage(([cur]) => [Math.min(Math.max(i, 0), questions.length - 1), i < cur ? -1 : 1]);
   }
 
   async function submit(final: StudentApplication) {
     const tidy = { ...final, referrals: final.referrals.filter((r) => r.name.trim() || r.email.trim()) };
     const errs = validateStudentApplication(tidy);
-    const firstBad = studentQuestions.findIndex((q) => errs[q.field as StudentField]);
+    const firstBad = questions.findIndex((q) => errs[q.field as StudentField]);
     if (firstBad >= 0) {
       goTo(firstBad);
-      setError(errs[studentQuestions[firstBad].field as StudentField] ?? null);
+      setError(errs[questions[firstBad].field as StudentField] ?? null);
       return;
     }
     setStatus("sending");
@@ -138,10 +144,10 @@ export function StudentApplicationForm({ initialEmail = "" }: { initialEmail?: s
       const body = await res.json().catch(() => ({}));
       if (res.status === 422 && body.errors) {
         setStatus("idle");
-        const bad = studentQuestions.findIndex((q) => body.errors[q.field]);
+        const bad = questions.findIndex((q) => body.errors[q.field]);
         if (bad >= 0) {
           goTo(bad);
-          setError(body.errors[studentQuestions[bad].field]);
+          setError(body.errors[questions[bad].field]);
         }
         return;
       }
@@ -219,8 +225,7 @@ export function StudentApplicationForm({ initialEmail = "" }: { initialEmail?: s
   }
 
   const describedBy = error ? `${INPUT_ID}-error` : "hint" in question ? `${INPUT_ID}-hint` : undefined;
-  const textField = field === "name" || field === "email" || field === "major" || field === "linkedin";
-  const optionalEmpty = field === "note" && !data.note.trim();
+  const textField = field === "name" || field === "email";
 
   return (
     <div className="w-full">
@@ -229,7 +234,7 @@ export function StudentApplicationForm({ initialEmail = "" }: { initialEmail?: s
           <motion.div
             className="h-full origin-left bg-cta"
             initial={false}
-            animate={{ scaleX: (index + 1) / studentQuestions.length }}
+            animate={{ scaleX: (index + 1) / questions.length }}
             transition={{ duration: reduce ? 0 : 0.8, ease: easeOutSoft }}
           />
         </div>
@@ -237,7 +242,7 @@ export function StudentApplicationForm({ initialEmail = "" }: { initialEmail?: s
           role="progressbar"
           aria-label="Application progress"
           aria-valuemin={1}
-          aria-valuemax={studentQuestions.length}
+          aria-valuemax={questions.length}
           aria-valuenow={index + 1}
           className="sr-only"
         />
@@ -320,13 +325,6 @@ export function StudentApplicationForm({ initialEmail = "" }: { initialEmail?: s
                     autoCapitalize: "none",
                     placeholder: "you@columbia.edu",
                   })}
-                  {...(field === "major" && { placeholder: "Computer Science" })}
-                  {...(field === "linkedin" && {
-                    type: "url",
-                    inputMode: "url" as const,
-                    autoCapitalize: "none",
-                    placeholder: "linkedin.com/in/yourname",
-                  })}
                 />
               )}
 
@@ -342,16 +340,34 @@ export function StudentApplicationForm({ initialEmail = "" }: { initialEmail?: s
                 />
               )}
 
-              {(field === "skills" || field === "interests" || field === "roles") && (
+              {field === "major" && (
+                <MajorPicker value={data.major} onChange={(v) => set("major", v)} describedBy={describedBy} invalid={!!error} />
+              )}
+
+              {field === "linkedin" && (
+                <LinkedInInput value={data.linkedin} onChange={(v) => set("linkedin", v)} describedBy={describedBy} invalid={!!error} />
+              )}
+
+              {field === "skills" && (
                 <ChipGroup
                   id={INPUT_ID}
                   labelledBy="question"
                   describedBy={describedBy}
-                  options={field === "skills" ? skillSuggestions : field === "interests" ? interestOptions : roleOptions}
+                  options={skillSuggestions}
+                  value={data.skills}
+                  onChange={(v) => set("skills", v)}
+                  allowCustom
+                  customPlaceholder="Add a skill"
+                />
+              )}
+
+              {(field === "interests" || field === "roles") && (
+                <IconTiles
+                  options={field === "interests" ? interestOptions : roleOptions}
+                  icons={field === "interests" ? interestIcons : roleIcons}
                   value={data[field]}
                   onChange={(v) => set(field, v)}
-                  allowCustom={field === "skills"}
-                  customPlaceholder="Add a skill"
+                  describedBy={describedBy}
                 />
               )}
 
@@ -359,20 +375,6 @@ export function StudentApplicationForm({ initialEmail = "" }: { initialEmail?: s
                 <ResumeUpload value={data.resume} onChange={(r) => set("resume", r)} onError={setError} describedBy={describedBy} />
               )}
 
-              {field === "note" && (
-                <Textarea
-                  id={INPUT_ID}
-                  autoFocus
-                  aria-labelledby="question"
-                  aria-describedby={describedBy}
-                  aria-invalid={!!error}
-                  placeholder="A project you're proud of, a startup you love, anything."
-                  value={data.note}
-                  maxLength={noteMax}
-                  onChange={(e) => set("note", e.target.value)}
-                  className="min-h-28"
-                />
-              )}
 
               {field === "referrals" && (
                 <Referrals value={data.referrals} onChange={(v) => set("referrals", v)} describedBy={describedBy} />
@@ -396,8 +398,6 @@ export function StudentApplicationForm({ initialEmail = "" }: { initialEmail?: s
                   </>
                 ) : isLast ? (
                   "Submit application"
-                ) : optionalEmpty ? (
-                  "Skip"
                 ) : (
                   <>
                     Continue

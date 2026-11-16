@@ -8,18 +8,51 @@ export const studentQuestions = [
   { field: "name", title: "What's your name?" },
   { field: "email", title: "What's your Columbia email?" },
   { field: "gradYear", title: "When do you graduate?" },
-  { field: "major", title: "What are you studying?" },
+  { field: "major", title: "What are you studying?", hint: "Search, or type your own." },
   { field: "linkedin", title: "Where's your LinkedIn?" },
   { field: "resume", title: "Add your resume.", hint: "PDF, up to 5 MB." },
   { field: "skills", title: "What are you good at?", hint: "Pick a few or add your own." },
-  { field: "interests", title: "What spaces are you into?" },
-  { field: "roles", title: "What kind of role do you want?" },
-  { field: "note", title: "Anything else we should know?", hint: "Optional." },
+  { field: "interests", title: "What spaces are you into?", hint: "Pick as many as you like." },
+  { field: "roles", title: "What kind of role do you want?", hint: "Pick as many as you like." },
   { field: "referrals", title: "Who are the sharpest people you know?", hint: "Up to 5 friends you know well and would vouch for." },
 ] as const;
 
 // TODO(CORE): confirm which schools count (Barnard, GS, grad schools, etc).
 export const studentEmailDomains = ["columbia.edu"];
+
+// Suggestions for the major picker. People can still type anything.
+export const majorOptions = [
+  "Computer Science",
+  "Economics",
+  "Financial Economics",
+  "Operations Research",
+  "Applied Mathematics",
+  "Mathematics",
+  "Statistics",
+  "Data Science",
+  "Political Science",
+  "Neuroscience and Behavior",
+  "Biology",
+  "Chemistry",
+  "Physics",
+  "Psychology",
+  "Sociology",
+  "Philosophy",
+  "History",
+  "English",
+  "Urban Studies",
+  "Architecture",
+  "Film and Media Studies",
+  "Sustainable Development",
+  "Mechanical Engineering",
+  "Electrical Engineering",
+  "Biomedical Engineering",
+  "Industrial Engineering",
+  "Chemical Engineering",
+  "Civil Engineering",
+  "Business (CBS)",
+  "Undeclared",
+];
 
 // TODO(CORE): confirm which class years are eligible.
 export const gradYears = ["2026", "2027", "2028", "2029", "2030", "Grad student"];
@@ -71,7 +104,5 @@ export const resumeRules = {
   types: ["application/pdf"],
   label: "PDF, up to 5 MB",
 };
-
-export const noteMax = 600;
 
 export const referralLimits = { min: 1, max: 5 };

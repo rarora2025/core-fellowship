@@ -3,7 +3,6 @@
  * (client) and the API route (server), so the rules live in one place.
  */
 import {
-  noteMax,
   referralLimits,
   resumeRules,
   studentEmailDomains,
@@ -23,7 +22,6 @@ export type StudentApplication = {
   skills: string[];
   interests: string[];
   roles: string[];
-  note: string;
   referrals: Referral[];
 };
 
@@ -40,12 +38,11 @@ export const emptyStudentApplication: StudentApplication = {
   skills: [],
   interests: [],
   roles: [],
-  note: "",
   referrals: [],
 };
 
 export const studentFields: StudentField[] = [
-  "name", "email", "gradYear", "major", "linkedin", "resume", "skills", "interests", "roles", "note", "referrals",
+  "name", "email", "gradYear", "major", "linkedin", "resume", "skills", "interests", "roles", "referrals",
 ];
 
 const EMAIL = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
@@ -96,8 +93,6 @@ function checkField(field: StudentField, a: StudentApplication): string | undefi
       return a.interests.length ? undefined : "Pick at least one area.";
     case "roles":
       return a.roles.length ? undefined : "Pick at least one kind of role.";
-    case "note":
-      return a.note.length <= noteMax ? undefined : `Keep it under ${noteMax} characters.`;
     case "referrals": {
       const filled = a.referrals.filter((r) => r.name.trim() || r.email.trim());
       if (filled.length < referralLimits.min) return "Add at least one person.";
