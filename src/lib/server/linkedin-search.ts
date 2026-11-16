@@ -1,12 +1,17 @@
 import "server-only";
 
 /**
- * Finds likely LinkedIn profiles through a web search API, not by
- * scraping LinkedIn (which their terms forbid and their site blocks).
+ * Finds likely LinkedIn profiles for an applicant from their name,
+ * Columbia and major.
  *
- * Set BRAVE_SEARCH_API_KEY to turn it on (https://brave.com/search/api/).
- * Without a key it reports itself unavailable and the form falls back to
- * pasting a link. LINKEDIN_SEARCH_MOCK=1 returns fake results for local UI work.
+ * LinkedIn profile pages sit behind a login wall for servers, so we read
+ * public search results instead: DuckDuckGo's plain HTML results page by
+ * default (no key needed), or the Brave Search API if BRAVE_SEARCH_API_KEY
+ * is set. Search pages can rate limit or change their markup; when that
+ * happens this returns nothing and the form falls back to pasting a link.
+ *
+ * LINKEDIN_SEARCH=off disables it. LINKEDIN_SEARCH_MOCK=1 returns fake
+ * results for local UI work.
  */
 export type ProfileMatch = {
   url: string;
@@ -20,7 +25,69 @@ type Query = { name: string; gradYear?: string; major?: string };
 const cache = new Map<string, { at: number; results: ProfileMatch[] }>();
 
 export function linkedinSearchAvailable() {
-  return !!process.env.BRAVE_SEARCH_API_KEY || process.env.LINKEDIN_SEARCH_MOCK === "1";
+  return process.env.LINKEDIN_SEARCH !== "off";
+}
+
+type Raw = { url: string; title: string; description: string; photo?: string };
+
+async function braveResults(q: string, apiKey: string): Promise<Raw[]> {
+  const res = await fetch(
+    `https://api.search.brave.com/res/v1/web/search?count=10&q=${encodeURIComponent(q)}`,
+    { headers: { Accept: "application/json", "X-Subscription-Token": apiKey }, signal: AbortSignal.timeout(6000) }
+  );
+  if (!res.ok) return [];
+  const body = (await res.json()) as {
+    web?: { results?: { url: string; title: string; description?: string; thumbnail?: { src?: string } }[] };
+  };
+  return (body.web?.results ?? []).map((r) => ({
+    url: r.url,
+    title: r.title,
+    description: r.description ?? "",
+    photo: r.thumbnail?.src,
+  }));
+}
+
+function decodeEntities(s: string) {
+  return s
+    .replace(/<[^>]+>/g, "")
+    .replace(/&amp;/g, "&")
+    .replace(/&quot;/g, '"')
+    .replace(/&#x27;|&#39;/g, "'")
+    .replace(/&lt;/g, "<")
+    .replace(/&gt;/g, ">")
+    .replace(/&nbsp;/g, " ")
+    .trim();
+}
+
+/** Reads DuckDuckGo's no-JavaScript results page. */
+async function duckDuckGoResults(q: string): Promise<Raw[]> {
+  const res = await fetch("https://html.duckduckgo.com/html/", {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/x-www-form-urlencoded",
+      "User-Agent":
+        "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0 Safari/537.36",
+      Accept: "text/html",
+    },
+    body: new URLSearchParams({ q, kl: "us-en" }).toString(),
+    signal: AbortSignal.timeout(7000),
+  });
+  if (!res.ok) return [];
+  const html = await res.text();
+  const out: Raw[] = [];
+  const link = /<a[^>]+class="result__a"[^>]+href="([^"]+)"[^>]*>([\s\S]*?)<\/a>/g;
+  const hits = [...html.matchAll(link)];
+  hits.slice(0, 12).forEach((m, i) => {
+    const end = hits[i + 1]?.index ?? html.length;
+    const chunk = html.slice(m.index! + m[0].length, end);
+    const snippet = chunk.match(/class="result__snippet"[^>]*>([\s\S]*?)<\/a>/)?.[1] ?? "";
+    let href = decodeEntities(m[1]);
+    const uddg = href.match(/[?&]uddg=([^&]+)/);
+    if (uddg) href = decodeURIComponent(uddg[1]);
+    if (href.startsWith("//")) href = `https:${href}`;
+    out.push({ url: href, title: decodeEntities(m[2]), description: decodeEntities(snippet) });
+  });
+  return out;
 }
 
 function cleanUrl(raw: string) {
@@ -52,34 +119,27 @@ export async function searchLinkedIn({ name, gradYear, major }: Query): Promise<
     ];
   }
 
-  const apiKey = process.env.BRAVE_SEARCH_API_KEY;
-  if (!apiKey) return [];
-
   const q = `site:linkedin.com/in "${name.trim()}" Columbia ${major ?? ""}`.trim();
-  const res = await fetch(
-    `https://api.search.brave.com/res/v1/web/search?count=10&q=${encodeURIComponent(q)}`,
-    { headers: { Accept: "application/json", "X-Subscription-Token": apiKey }, signal: AbortSignal.timeout(6000) }
-  );
-  if (!res.ok) return [];
-  const body = (await res.json()) as {
-    web?: { results?: { url: string; title: string; description?: string; thumbnail?: { src?: string } }[] };
-  };
+  const apiKey = process.env.BRAVE_SEARCH_API_KEY;
+  let raw = apiKey ? await braveResults(q, apiKey) : await duckDuckGoResults(q);
+  // A looser second try if the strict query finds nothing.
+  if (!raw.length && !apiKey) raw = await duckDuckGoResults(`${name.trim()} Columbia University linkedin`);
 
   const want = name.trim().toLowerCase().split(/\s+/);
   const seen = new Set<string>();
   const scored: (ProfileMatch & { score: number })[] = [];
-  for (const r of body.web?.results ?? []) {
+  for (const r of raw) {
     const url = cleanUrl(r.url);
     if (!url || seen.has(url)) continue;
     seen.add(url);
     const { name: n, headline } = parseTitle(r.title);
-    const text = `${r.title} ${r.description ?? ""}`.toLowerCase();
+    const text = `${r.title} ${r.description}`.toLowerCase();
     let score = want.filter((w) => n.toLowerCase().includes(w)).length * 3;
     if (text.includes("columbia")) score += 3;
     if (major && text.includes(major.toLowerCase())) score += 2;
     if (gradYear && /^\d{4}$/.test(gradYear) && text.includes(gradYear)) score += 1;
     if (score < 3) continue;
-    scored.push({ url, name: n, headline, photo: r.thumbnail?.src, score });
+    scored.push({ url, name: n, headline, photo: r.photo, score });
   }
   const results = scored
     .sort((a, b) => b.score - a.score)
