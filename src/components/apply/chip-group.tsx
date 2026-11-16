@@ -18,6 +18,8 @@ export function ChipGroup({
   customPlaceholder = "Add your own",
   invalid,
   describedBy,
+  single,
+  labelledBy,
 }: {
   id: string;
   options: string[];
@@ -27,12 +29,16 @@ export function ChipGroup({
   customPlaceholder?: string;
   invalid?: boolean;
   describedBy?: string;
+  /** Pick exactly one instead of many. */
+  single?: boolean;
+  labelledBy?: string;
 }) {
   const [draft, setDraft] = React.useState("");
   const custom = value.filter((v) => !options.includes(v));
   const all = [...options, ...custom];
 
   function toggle(option: string) {
+    if (single) return onChange([option]);
     onChange(value.includes(option) ? value.filter((v) => v !== option) : [...value, option]);
   }
 
@@ -53,9 +59,9 @@ export function ChipGroup({
       id={id}
       role="group"
       tabIndex={-1}
-      aria-labelledby={`${id}-label`}
+      aria-labelledby={labelledBy ?? `${id}-label`}
       aria-describedby={describedBy}
-      className="flex flex-wrap gap-2 outline-none"
+      className="flex flex-wrap justify-center gap-2 outline-none"
     >
       {all.map((option) => {
         const on = value.includes(option);

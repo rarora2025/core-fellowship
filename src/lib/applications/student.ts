@@ -6,7 +6,6 @@ import {
   lookingForMax,
   resumeRules,
   studentEmailDomains,
-  type StudentStepKey,
 } from "@/content/student-application";
 
 export type ResumeMeta = { name: string; size: number; type: string };
@@ -40,12 +39,9 @@ export const emptyStudentApplication: StudentApplication = {
   lookingFor: "",
 };
 
-export const stepFields: Record<StudentStepKey, StudentField[]> = {
-  about: ["name", "email", "gradYear", "major"],
-  experience: ["linkedin", "resume", "skills"],
-  goals: ["interests", "roles", "lookingFor"],
-  review: [],
-};
+export const studentFields: StudentField[] = [
+  "name", "email", "gradYear", "major", "linkedin", "resume", "skills", "interests", "roles", "lookingFor",
+];
 
 const EMAIL = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
@@ -79,9 +75,9 @@ function checkField(field: StudentField, a: StudentApplication): string | undefi
         ? undefined
         : `Use your ${studentEmailDomains.map((d) => `@${d}`).join(" or ")} email.`;
     case "gradYear":
-      return a.gradYear ? undefined : "Pick your graduation year.";
+      return a.gradYear ? undefined : "Pick one.";
     case "major":
-      return a.major.trim() ? undefined : "Add your major, or what you're planning to study.";
+      return a.major.trim() ? undefined : "Add your major, or what you plan to study.";
     case "linkedin":
       if (!a.linkedin.trim()) return "Add your LinkedIn profile.";
       return isLinkedInUrl(a.linkedin) ? undefined : "That doesn't look like a LinkedIn profile link.";
@@ -111,5 +107,5 @@ export function validateFields(fields: StudentField[], a: StudentApplication): S
 }
 
 export function validateStudentApplication(a: StudentApplication) {
-  return validateFields(Object.values(stepFields).flat(), a);
+  return validateFields(studentFields, a);
 }

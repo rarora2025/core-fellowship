@@ -3,14 +3,19 @@
  * None of this is program policy: adjust freely as CORE decides.
  */
 
-export const studentSteps = [
-  { key: "about", title: "About you", intro: "The basics, so we know who we're talking to." },
-  { key: "experience", title: "Your experience", intro: "Where you've been and what you're good at." },
-  { key: "goals", title: "What you want", intro: "Help us find a startup you'd actually be excited about." },
-  { key: "review", title: "Review", intro: "Take a quick look before you send it." },
+/** One question per screen, in this order. */
+export const studentQuestions = [
+  { field: "name", title: "What's your name?" },
+  { field: "email", title: "What's your Columbia email?" },
+  { field: "gradYear", title: "When do you graduate?" },
+  { field: "major", title: "What are you studying?" },
+  { field: "linkedin", title: "Where's your LinkedIn?" },
+  { field: "resume", title: "Got a resume?", hint: "Optional. PDF, up to 5 MB." },
+  { field: "skills", title: "What are you good at?", hint: "Pick a few or add your own." },
+  { field: "interests", title: "What spaces are you into?" },
+  { field: "roles", title: "What kind of role do you want?" },
+  { field: "lookingFor", title: "What are you hoping to find?", hint: "An internship, part time work, something to learn. Whatever's true." },
 ] as const;
-
-export type StudentStepKey = (typeof studentSteps)[number]["key"];
 
 // TODO(CORE): confirm which schools count (Barnard, GS, grad schools, etc).
 export const studentEmailDomains = ["columbia.edu"];

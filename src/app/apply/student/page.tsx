@@ -1,6 +1,6 @@
 import type { Metadata } from "next";
 
-import { ApplyHeader } from "@/components/apply/apply-header";
+import { ThemeToggle } from "@/components/site/theme-toggle";
 import { StudentApplicationForm } from "@/components/apply/student-application";
 
 export const metadata: Metadata = {
@@ -16,8 +16,13 @@ export default async function StudentApplyPage({
   const { email } = await searchParams;
   return (
     <>
-      <ApplyHeader />
-      <main id="main" className="mx-auto w-full max-w-[600px] px-5 pb-24 pt-8 sm:pt-14">
+      <div className="fixed right-5 top-3 z-50 sm:right-8">
+        <ThemeToggle />
+      </div>
+      <main
+        id="main"
+        className="mx-auto flex min-h-[100svh] w-full max-w-[680px] flex-col items-center justify-center px-5 pb-16 pt-24"
+      >
         <StudentApplicationForm initialEmail={typeof email === "string" ? email.slice(0, 200) : ""} />
       </main>
     </>
