@@ -5,11 +5,51 @@ import { AnimatePresence, motion } from "framer-motion";
 import { Check, Search } from "lucide-react";
 
 import { easeOutSoft } from "@/components/motion/easing";
-import { majorOptions } from "@/content/student-application";
+import { majorAliases, majorOptions } from "@/content/student-application";
 import { cn } from "@/lib/utils";
 
 const fieldShell =
   "flex h-12 w-full items-center rounded-xl border border-input bg-background transition-[border-color,box-shadow] duration-300 focus-within:border-columbia-deep/60 focus-within:ring-4 focus-within:ring-columbia-soft has-[[aria-invalid=true]]:border-destructive has-[[aria-invalid=true]]:ring-4 has-[[aria-invalid=true]]:ring-destructive/10";
+
+const SMALL = new Set(["and", "of", "the", "&"]);
+const initialsOf = (m: string) =>
+  m
+    .replace(/\(.*?\)/g, "")
+    .split(/\s+/)
+    .filter((w) => w && !SMALL.has(w.toLowerCase()))
+    .map((w) => w[0])
+    .join("")
+    .toLowerCase();
+
+/** Ranks majors by name, short names (IEOR, econ) and initials (CS, BME). */
+function searchMajors(q: string) {
+  const scored = majorOptions
+    .map((m) => {
+      const name = m.toLowerCase();
+      const aliases = majorAliases[m] ?? [];
+      let score = 0;
+      if (name.startsWith(q)) score = 5;
+      else if (aliases.some((a) => a === q)) score = 5;
+      else if (initialsOf(m) === q.replace(/\s+/g, "")) score = 4;
+      else if (aliases.some((a) => a.startsWith(q))) score = 3;
+      else if (name.split(/\s+/).some((w) => w.startsWith(q))) score = 2;
+      else if (name.includes(q)) score = 1;
+      return { m, score };
+    })
+    .filter((x) => x.score > 0)
+    .sort((a, b) => b.score - a.score);
+  return scored.slice(0, 8).map((x) => x.m);
+}
+
+/** Turns an exact short name ("ieor", "cs") into the full major. */
+export function resolveMajor(value: string) {
+  const q = value.trim().toLowerCase();
+  if (!q) return value;
+  const hit = majorOptions.find(
+    (m) => m.toLowerCase() === q || (majorAliases[m] ?? []).includes(q) || initialsOf(m) === q.replace(/\s+/g, "")
+  );
+  return hit && q.length >= 2 ? hit : value;
+}
 
 /** Search box with tappable suggestions. Anything typed still counts. */
 export function MajorPicker({
@@ -25,9 +65,7 @@ export function MajorPicker({
 }) {
   const q = value.trim().toLowerCase();
   const exact = majorOptions.find((m) => m.toLowerCase() === q);
-  const matches = q
-    ? majorOptions.filter((m) => m.toLowerCase().includes(q)).slice(0, 8)
-    : majorOptions.slice(0, 8);
+  const matches = q ? searchMajors(q) : majorOptions.slice(0, 8);
 
   return (
     <div>

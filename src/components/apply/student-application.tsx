@@ -3,19 +3,19 @@
 import * as React from "react";
 import Link from "next/link";
 import { AnimatePresence, motion, useReducedMotion, type Variants } from "framer-motion";
-import { ArrowLeft, ArrowRight, Check, FileText, Loader2, Plus, Upload, X } from "lucide-react";
+import { ArrowLeft, ArrowRight, Check, Loader2, Plus, X } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { FuturePicker } from "@/components/apply/future-picker";
+import { ResumeUpload } from "@/components/apply/resume-upload";
 import { LinkedInFinder } from "@/components/apply/linkedin-finder";
-import { MajorPicker } from "@/components/apply/text-pickers";
+import { MajorPicker, resolveMajor } from "@/components/apply/text-pickers";
 import { WheelPicker } from "@/components/apply/wheel-picker";
 import { easeOutSoft } from "@/components/motion/easing";
 import {
   gradYears,
   referralLimits,
-  resumeRules,
   studentQuestions,
   type StudentQuestion,
 } from "@/content/student-application";
@@ -26,11 +26,9 @@ import {
   validateFields,
   validateStudentApplication,
   type Referral,
-  type ResumeMeta,
   type StudentApplication,
   type StudentField,
 } from "@/lib/applications/student";
-import { looksLikePdf } from "@/lib/pdf";
 import { cn } from "@/lib/utils";
 
 const DRAFT_KEY = "core:student-application";
@@ -180,6 +178,10 @@ export function StudentApplicationForm({ initialEmail = "" }: { initialEmail?: s
     let value = current;
     if (field === "linkedin") {
       value = { ...current, linkedin: normalizeLinkedIn(current.linkedin) };
+      setData(value);
+    }
+    if (field === "major") {
+      value = { ...current, major: resolveMajor(current.major) };
       setData(value);
     }
     if (isLast) return void submit(value);
@@ -368,18 +370,11 @@ export function StudentApplicationForm({ initialEmail = "" }: { initialEmail?: s
               )}
 
               {field === "future" && (
-                <FuturePicker
-                  skills={data.skills}
-                  interests={data.interests}
-                  roles={data.roles}
-                  onChange={set}
-                  describedBy={describedBy}
-                  focusField={errorField}
-                />
+                <FuturePicker data={data} onChange={set} describedBy={describedBy} focusField={errorField} />
               )}
 
               {field === "resume" && (
-                <ResumeUpload value={data.resume} onChange={(r) => set("resume", r)} onError={setError} describedBy={describedBy} />
+                <ResumeUpload id={INPUT_ID} value={data.resume} onChange={(r) => set("resume", r)} onError={setError} describedBy={describedBy} />
               )}
 
 
@@ -422,171 +417,6 @@ export function StudentApplicationForm({ initialEmail = "" }: { initialEmail?: s
 }
 
 /* ------------------------------------------------------------------ */
-
-function formatBytes(n: number) {
-  return n < 1024 * 1024 ? `${Math.max(1, Math.round(n / 1024))} KB` : `${(n / 1024 / 1024).toFixed(1)} MB`;
-}
-
-/**
- * Picks (or takes a dropped) PDF, checks it in the browser, then
- * uploads it right away with a progress bar. The server checks it
- * again and stores it, returning an id the application points to.
- */
-function ResumeUpload({
-  value,
-  onChange,
-  onError,
-  describedBy,
-}: {
-  value: ResumeMeta | null;
-  onChange: (r: ResumeMeta | null) => void;
-  onError: (msg: string | null) => void;
-  describedBy?: string;
-}) {
-  const inputRef = React.useRef<HTMLInputElement>(null);
-  const [progress, setProgress] = React.useState<number | null>(null);
-  const [dragging, setDragging] = React.useState(false);
-  const xhr = React.useRef<XMLHttpRequest | null>(null);
-
-  React.useEffect(() => () => xhr.current?.abort(), []);
-
-  async function take(file: File | undefined) {
-    if (!file) return;
-    onError(null);
-    if (file.size > resumeRules.maxBytes) return onError("That file is over 5 MB.");
-    const head = new Uint8Array(await file.slice(0, 5).arrayBuffer());
-    if (!looksLikePdf(head)) return onError("That file isn't a PDF. Export your resume as a PDF and try again.");
-
-    const body = new FormData();
-    body.set("file", file);
-    const req = new XMLHttpRequest();
-    xhr.current = req;
-    setProgress(0);
-    req.upload.onprogress = (e) => e.lengthComputable && setProgress(e.loaded / e.total);
-    req.onload = () => {
-      let res: { ok?: boolean; error?: string; resume?: ResumeMeta } = {};
-      try {
-        res = JSON.parse(req.responseText);
-      } catch {}
-      setProgress(null);
-      if (req.status >= 200 && req.status < 300 && res.resume) onChange(res.resume);
-      else onError(res.error ?? "Upload failed. Try again.");
-    };
-    req.onerror = () => {
-      setProgress(null);
-      onError("Upload failed. Check your connection and try again.");
-    };
-    req.open("POST", "/api/uploads/resume");
-    req.send(body);
-  }
-
-  const picker = (
-    <input
-      ref={inputRef}
-      type="file"
-      accept="application/pdf,.pdf"
-      className="sr-only"
-      tabIndex={-1}
-      aria-hidden="true"
-      onChange={(e) => {
-        take(e.target.files?.[0]);
-        e.target.value = "";
-      }}
-    />
-  );
-
-  if (progress !== null) {
-    return (
-      <div className="flex h-[132px] flex-col items-center justify-center gap-4 rounded-xl border border-input px-6" aria-live="polite">
-        <span className="text-[14px] text-muted-foreground">Uploading</span>
-        <div className="h-1.5 w-full max-w-[240px] overflow-hidden rounded-full bg-muted">
-          <motion.div
-            className="h-full origin-left rounded-full bg-cta"
-            initial={{ scaleX: 0 }}
-            animate={{ scaleX: Math.max(progress, 0.06) }}
-            transition={{ duration: 0.4, ease: easeOutSoft }}
-          />
-        </div>
-      </div>
-    );
-  }
-
-  if (value?.id) {
-    return (
-      <motion.div
-        initial={{ opacity: 0, scale: 0.97 }}
-        animate={{ opacity: 1, scale: 1 }}
-        transition={{ duration: 0.6, ease: easeOutSoft }}
-        className="flex items-center gap-3 rounded-xl border border-input p-3"
-      >
-        {picker}
-        <span className="grid size-11 shrink-0 place-items-center rounded-lg bg-columbia-soft text-columbia-deep">
-          <FileText className="size-5" aria-hidden="true" />
-        </span>
-        <span className="min-w-0 flex-1">
-          <span className="block truncate text-[14.5px] font-medium">{value.name}</span>
-          <span className="mt-0.5 flex items-center gap-1.5 text-[12.5px] text-muted-foreground">
-            <Check className="size-3.5 text-cta" aria-hidden="true" />
-            Uploaded · {formatBytes(value.size)}
-            {value.pages ? ` · ${value.pages} ${value.pages === 1 ? "page" : "pages"}` : ""}
-          </span>
-        </span>
-        <button
-          id={INPUT_ID}
-          type="button"
-          onClick={() => inputRef.current?.click()}
-          className="rounded-full px-3 py-2 text-[13px] text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
-        >
-          Replace
-        </button>
-        <button
-          type="button"
-          aria-label="Remove resume"
-          onClick={() => onChange(null)}
-          className="grid size-8 shrink-0 place-items-center rounded-full text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
-        >
-          <X className="size-4" />
-        </button>
-      </motion.div>
-    );
-  }
-
-  return (
-    <>
-      {picker}
-      <button
-        id={INPUT_ID}
-        type="button"
-        autoFocus
-        aria-labelledby="question"
-        aria-describedby={describedBy}
-        onClick={() => inputRef.current?.click()}
-        onDragOver={(e) => {
-          e.preventDefault();
-          setDragging(true);
-        }}
-        onDragLeave={() => setDragging(false)}
-        onDrop={(e) => {
-          e.preventDefault();
-          setDragging(false);
-          take(e.dataTransfer.files?.[0]);
-        }}
-        className={cn(
-          "flex h-[132px] w-full flex-col items-center justify-center gap-2 rounded-xl border border-dashed text-muted-foreground outline-none transition-[border-color,background-color,color] duration-300 focus-visible:ring-[3px] focus-visible:ring-ring/50",
-          dragging ? "border-cta bg-columbia-soft text-foreground" : "border-input hover:border-columbia hover:text-foreground"
-        )}
-      >
-        <span className="grid size-10 place-items-center rounded-full bg-columbia-soft text-columbia-deep">
-          <Upload className="size-[18px]" aria-hidden="true" />
-        </span>
-        <span className="text-[14.5px]">
-          <span className="font-medium text-foreground">Choose a PDF</span>
-          <span className="hidden sm:inline"> or drop it here</span>
-        </span>
-      </button>
-    </>
-  );
-}
 
 /* ------------------------------------------------------------------ */
 

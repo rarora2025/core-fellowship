@@ -22,6 +22,10 @@ export type StudentApplication = {
   skills: string[];
   interests: string[];
   roles: string[];
+  /** What they typed on the "future" step, before it was condensed to chips. */
+  skillsText: string;
+  interestsText: string;
+  rolesText: string;
   referrals: Referral[];
 };
 
@@ -38,6 +42,9 @@ export const emptyStudentApplication: StudentApplication = {
   skills: [],
   interests: [],
   roles: [],
+  skillsText: "",
+  interestsText: "",
+  rolesText: "",
   referrals: [],
 };
 

@@ -23,6 +23,9 @@ export async function POST(request: Request) {
   }
 
   const application: StudentApplication = { ...emptyStudentApplication, ...parsed };
+  for (const key of ["skillsText", "interestsText", "rolesText"] as const) {
+    application[key] = typeof application[key] === "string" ? application[key].slice(0, 500) : "";
+  }
   const errors = validateStudentApplication(application);
   if (!application.resume?.id || !(await resumeExists(application.resume.id))) {
     errors.resume = "Upload your resume again.";

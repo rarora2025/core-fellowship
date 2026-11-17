@@ -9,13 +9,13 @@ export const studentQuestions = [
   { field: "name", title: "What's your name?" },
   { field: "email", title: "What's your Columbia email?" },
   { field: "major", title: "What are you studying?", hint: "Search, or type your own." },
-  { field: "linkedin", title: "Find your LinkedIn.", hint: "Tap yours, or paste the link." },
-  { field: "resume", title: "Add your resume.", hint: "PDF, up to 5 MB." },
+  { field: "linkedin", title: "Which one is your LinkedIn?", hint: "Tap yours, or paste the link." },
+  { field: "resume", title: "Can we see your resume?", hint: "Drop, paste or choose a PDF." },
   {
     field: "future",
     fields: ["skills", "interests", "roles"],
     title: "What does your future look like?",
-    hint: "What you're good at, the spaces you like, and the roles you want.",
+    hint: "Say it however you like. We'll pull out the key words.",
   },
   { field: "referrals", title: "Who are the sharpest people you know?", hint: "Up to 5 friends you know well and would vouch for." },
 ] as const;
@@ -31,6 +31,8 @@ export const majorOptions = [
   "Economics",
   "Financial Economics",
   "Operations Research",
+  "Industrial Engineering and Operations Research",
+  "Financial Engineering",
   "Applied Mathematics",
   "Mathematics",
   "Statistics",
@@ -58,6 +60,28 @@ export const majorOptions = [
   "Business (CBS)",
   "Undeclared",
 ];
+
+// Short names people actually type. Initials (CS, IEOR, BME) are matched automatically.
+export const majorAliases: Record<string, string[]> = {
+  "Computer Science": ["comp sci", "compsci", "coms"],
+  Economics: ["econ"],
+  "Financial Economics": ["fin econ", "finecon"],
+  "Operations Research": ["or", "ops research"],
+  "Industrial Engineering and Operations Research": ["ieor", "industrial engineering"],
+  "Financial Engineering": ["fe", "fin eng", "ieor fe"],
+  "Applied Mathematics": ["apam", "applied math"],
+  Mathematics: ["math", "maths"],
+  Statistics: ["stats", "stat"],
+  "Political Science": ["poli sci", "polisci", "polysci"],
+  "Neuroscience and Behavior": ["neuro", "nsb"],
+  "Biomedical Engineering": ["bme", "biomed"],
+  "Electrical Engineering": ["ee"],
+  "Mechanical Engineering": ["meche", "mech e", "mech"],
+  "Chemical Engineering": ["cheme", "chem e"],
+  "Film and Media Studies": ["film"],
+  Psychology: ["psych"],
+  "Business (CBS)": ["cbs", "business", "mba"],
+};
 
 // TODO(CORE): confirm which class years are eligible.
 export const gradYears = ["2026", "2027", "2028", "2029", "2030", "Grad student"];
