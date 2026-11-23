@@ -318,7 +318,7 @@ export function StudentApplicationForm({ initialEmail = "" }: { initialEmail?: s
             </motion.p>
           )}
 
-          <motion.div variants={child} custom={direction} className={cn(cardClass, "mt-8 text-left sm:mt-9", field === "referrals" ? "max-w-[540px]" : "max-w-[460px]")}>
+          <motion.div variants={child} custom={direction} className={cn(cardClass, "mt-8 text-left sm:mt-9", field === "referrals" ? "max-w-[600px]" : "max-w-[460px]")}>
             <div className="px-2.5 pb-2.5 pt-2.5 sm:px-4 sm:pb-3 sm:pt-4">
               {textField && (
                 <Input
@@ -523,7 +523,7 @@ function ReferralRow({
     <div className="rounded-xl bg-muted/60 p-2">
       <div className="flex items-start gap-2.5 sm:gap-3">
         <Avatar name={value.name} email={value.email} index={index} />
-        <div className="grid min-w-0 flex-1 gap-2 sm:grid-cols-2">
+        <div className="grid min-w-0 flex-1 gap-2 sm:grid-cols-[minmax(0,2fr)_minmax(0,3fr)]">
           <Input
             ref={nameRef}
             id={index === 0 ? INPUT_ID : undefined}
@@ -559,17 +559,6 @@ function ReferralRow({
                 {check?.state === "checking" && (
                   <motion.span key="c" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}>
                     <Loader2 className="size-4 animate-spin text-subtle-foreground" aria-hidden="true" />
-                  </motion.span>
-                )}
-                {check?.state === "ok" && !suggestion && (
-                  <motion.span
-                    key="ok"
-                    initial={{ opacity: 0, scale: 0.5 }}
-                    animate={{ opacity: 1, scale: 1 }}
-                    exit={{ opacity: 0 }}
-                    transition={{ duration: 0.4, ease: easeOutSoft }}
-                  >
-                    <Check className="size-4 text-cta" aria-label="Email looks good" />
                   </motion.span>
                 )}
               </AnimatePresence>
