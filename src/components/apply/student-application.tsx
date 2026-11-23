@@ -237,7 +237,7 @@ export function StudentApplicationForm({ initialEmail = "" }: { initialEmail?: s
     );
   }
 
-  const describedBy = error ? `${INPUT_ID}-error` : "hint" in question ? `${INPUT_ID}-hint` : undefined;
+  const describedBy = error ? `${INPUT_ID}-error` : question.hint ? `${INPUT_ID}-hint` : undefined;
   const textField = field === "name" || field === "email";
 
   return (
@@ -307,7 +307,7 @@ export function StudentApplicationForm({ initialEmail = "" }: { initialEmail?: s
           >
             {question.title}
           </motion.h1>
-          {"hint" in question && (
+          {question.hint && (
             <motion.p
               variants={child}
               custom={direction}
@@ -374,7 +374,7 @@ export function StudentApplicationForm({ initialEmail = "" }: { initialEmail?: s
               )}
 
               {field === "referrals" && (
-                <Referrals value={data.referrals} onChange={(v) => set("referrals", v)} describedBy={describedBy} />
+                <Referrals value={data.referrals} ownEmail={data.email} onChange={(v) => set("referrals", v)} describedBy={describedBy} />
               )}
 
               <p id={`${INPUT_ID}-error`} role="alert" className="min-h-5 px-1 pt-1.5 text-[13px] text-destructive">
@@ -490,7 +490,7 @@ function Avatar({ name, email, index }: { name: string; email: string; index: nu
 }
 
 /** Checks a friend's email as it's typed: it has to be a Columbia address. */
-function useEmailCheck(email: string): EmailCheck | null {
+function checkEmail(email: string): EmailCheck | null {
   const clean = email.trim();
   if (!EMAIL_SHAPE.test(clean)) return null;
   if (isSchoolEmail(clean)) return { state: "ok", suggestion: null };
@@ -500,6 +500,7 @@ function useEmailCheck(email: string): EmailCheck | null {
 
 function ReferralRow({
   index,
+  ownEmail,
   value,
   onChange,
   onRemove,
@@ -507,13 +508,15 @@ function ReferralRow({
   nameRef,
 }: {
   index: number;
+  ownEmail: string;
   value: Referral;
   onChange: (patch: Partial<Referral>) => void;
   onRemove?: () => void;
   onEnterLast?: () => void;
   nameRef?: React.Ref<HTMLInputElement>;
 }) {
-  const check = useEmailCheck(value.email);
+  const isSelf = !!ownEmail && value.email.trim().toLowerCase() === ownEmail.trim().toLowerCase();
+  const check: EmailCheck | null = isSelf ? { state: "bad", suggestion: null } : checkEmail(value.email);
   const suggestion = check && check.state !== "checking" ? check.suggestion : null;
 
   return (
@@ -609,7 +612,9 @@ function ReferralRow({
                   <span className="text-muted-foreground">?</span>
                 </>
               ) : (
-                <span className="text-destructive">Use their @columbia.edu email.</span>
+                <span className="text-destructive">
+                  {isSelf ? "That's you. Add someone else." : "Use their @columbia.edu email."}
+                </span>
               )}
             </span>
           </motion.p>
@@ -621,10 +626,12 @@ function ReferralRow({
 
 function Referrals({
   value,
+  ownEmail,
   onChange,
   describedBy,
 }: {
   value: Referral[];
+  ownEmail: string;
   onChange: (v: Referral[]) => void;
   describedBy?: string;
 }) {
@@ -662,6 +669,7 @@ function Referrals({
             >
               <ReferralRow
                 index={i}
+                ownEmail={ownEmail}
                 value={r}
                 nameRef={i === rows.length - 1 ? lastNameRef : undefined}
                 onChange={(patch) => onChange(rows.map((row, j) => (j === i ? { ...row, ...patch } : row)))}
