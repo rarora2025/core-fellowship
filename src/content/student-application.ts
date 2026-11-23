@@ -11,13 +11,7 @@ export const studentQuestions = [
   { field: "major", title: "What are you studying?", hint: "Search, or type your own." },
   { field: "linkedin", title: "Which one is your LinkedIn?", hint: "Tap yours, or paste the link." },
   { field: "resume", title: "Can we see your resume?", hint: "Drop, paste or choose a PDF." },
-  {
-    field: "future",
-    fields: ["skills", "interests", "roles"],
-    title: "What does your future look like?",
-    hint: "Say it however you like. We'll pull out the key words.",
-  },
-  { field: "referrals", title: "Who are the sharpest people you know?", hint: "Up to 5 friends you know well and would vouch for." },
+  { field: "referrals", title: "Who are the sharpest people you know?", hint: "Optional. Up to 5 Columbia friends you would vouch for." },
 ] as const;
 
 export type StudentQuestion = (typeof studentQuestions)[number];
@@ -134,4 +128,4 @@ export const resumeRules = {
   label: "PDF, up to 5 MB",
 };
 
-export const referralLimits = { min: 1, max: 5 };
+export const referralLimits = { min: 0, max: 5 };

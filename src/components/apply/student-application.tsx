@@ -7,7 +7,6 @@ import { ArrowLeft, ArrowRight, Check, Loader2, Plus, X } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { FuturePicker } from "@/components/apply/future-picker";
 import { ResumeUpload } from "@/components/apply/resume-upload";
 import { LinkedInFinder } from "@/components/apply/linkedin-finder";
 import { MajorPicker, resolveMajor } from "@/components/apply/text-pickers";
@@ -29,6 +28,7 @@ import {
   type StudentApplication,
   type StudentField,
 } from "@/lib/applications/student";
+import { suggestEmail } from "@/lib/email-typos";
 import { cn } from "@/lib/utils";
 
 const DRAFT_KEY = "core:student-application";
@@ -71,7 +71,7 @@ function clearDraft() {
 }
 
 function fieldsOf(q: StudentQuestion): StudentField[] {
-  return ("fields" in q ? [...q.fields] : [q.field]) as StudentField[];
+  return [q.field as StudentField];
 }
 
 const iconButton =
@@ -112,9 +112,9 @@ export function StudentApplicationForm({ initialEmail = "" }: { initialEmail?: s
     [initialEmail]
   );
   const question = questions[Math.min(index, questions.length - 1)];
-  const field = question.field as StudentField | "future";
+  const field = question.field as StudentField;
   const fields = fieldsOf(question);
-  const [errorField, setErrorField] = React.useState<StudentField | null>(null);
+  const [, setErrorField] = React.useState<StudentField | null>(null);
   const isLast = index >= questions.length - 1;
 
   const set: Setter = React.useCallback((key, value) => {
@@ -318,7 +318,7 @@ export function StudentApplicationForm({ initialEmail = "" }: { initialEmail?: s
             </motion.p>
           )}
 
-          <motion.div variants={child} custom={direction} className={cn(cardClass, "mt-8 text-left sm:mt-9", field === "referrals" || field === "future" ? "max-w-[540px]" : "max-w-[460px]")}>
+          <motion.div variants={child} custom={direction} className={cn(cardClass, "mt-8 text-left sm:mt-9", field === "referrals" ? "max-w-[540px]" : "max-w-[460px]")}>
             <div className="px-2.5 pb-2.5 pt-2.5 sm:px-4 sm:pb-3 sm:pt-4">
               {textField && (
                 <Input
@@ -369,14 +369,9 @@ export function StudentApplicationForm({ initialEmail = "" }: { initialEmail?: s
                 />
               )}
 
-              {field === "future" && (
-                <FuturePicker data={data} onChange={set} describedBy={describedBy} focusField={errorField} />
-              )}
-
               {field === "resume" && (
                 <ResumeUpload id={INPUT_ID} value={data.resume} onChange={(r) => set("resume", r)} onError={setError} describedBy={describedBy} />
               )}
-
 
               {field === "referrals" && (
                 <Referrals value={data.referrals} onChange={(v) => set("referrals", v)} describedBy={describedBy} />
@@ -399,7 +394,9 @@ export function StudentApplicationForm({ initialEmail = "" }: { initialEmail?: s
                     Sending
                   </>
                 ) : isLast ? (
-                  "Submit application"
+                  field === "referrals" && !data.referrals.some((r) => r.name.trim() || r.email.trim())
+                    ? "Skip and submit"
+                    : "Submit application"
                 ) : (
                   <>
                     Continue
@@ -492,37 +489,13 @@ function Avatar({ name, email, index }: { name: string; email: string; index: nu
   );
 }
 
-/** Checks an email as it's typed: domain receives mail, and common typos. */
-function useEmailCheck(email: string) {
-  const [check, setCheck] = React.useState<EmailCheck | null>(null);
-  React.useEffect(() => {
-    const clean = email.trim();
-    if (!EMAIL_SHAPE.test(clean)) {
-      setCheck(null);
-      return;
-    }
-    const ctrl = new AbortController();
-    setCheck({ state: "checking" });
-    const t = window.setTimeout(async () => {
-      try {
-        const res = await fetch("/api/verify-email", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ email: clean }),
-          signal: ctrl.signal,
-        });
-        const body = (await res.json()) as { deliverable: boolean; suggestion: string | null };
-        setCheck({ state: body.deliverable ? "ok" : "bad", suggestion: body.suggestion });
-      } catch {
-        if (!ctrl.signal.aborted) setCheck(null);
-      }
-    }, 550);
-    return () => {
-      ctrl.abort();
-      window.clearTimeout(t);
-    };
-  }, [email]);
-  return check;
+/** Checks a friend's email as it's typed: it has to be a Columbia address. */
+function useEmailCheck(email: string): EmailCheck | null {
+  const clean = email.trim();
+  if (!EMAIL_SHAPE.test(clean)) return null;
+  if (isSchoolEmail(clean)) return { state: "ok", suggestion: null };
+  const fix = suggestEmail(clean);
+  return { state: "bad", suggestion: fix && isSchoolEmail(fix) ? fix : null };
 }
 
 function ReferralRow({
@@ -566,7 +539,7 @@ function ReferralRow({
               inputMode="email"
               autoCapitalize="none"
               autoComplete="off"
-              placeholder="Email"
+              placeholder="uni@columbia.edu"
               value={value.email}
               aria-invalid={check?.state === "bad" || undefined}
               onChange={(e) => onChange({ email: e.target.value })}
@@ -636,7 +609,7 @@ function ReferralRow({
                   <span className="text-muted-foreground">?</span>
                 </>
               ) : (
-                <span className="text-destructive">That email domain can&apos;t receive mail.</span>
+                <span className="text-destructive">Use their @columbia.edu email.</span>
               )}
             </span>
           </motion.p>

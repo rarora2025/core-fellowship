@@ -19,13 +19,6 @@ export type StudentApplication = {
   major: string;
   linkedin: string;
   resume: ResumeMeta | null;
-  skills: string[];
-  interests: string[];
-  roles: string[];
-  /** What they typed on the "future" step, before it was condensed to chips. */
-  skillsText: string;
-  interestsText: string;
-  rolesText: string;
   referrals: Referral[];
 };
 
@@ -39,17 +32,11 @@ export const emptyStudentApplication: StudentApplication = {
   major: "",
   linkedin: "",
   resume: null,
-  skills: [],
-  interests: [],
-  roles: [],
-  skillsText: "",
-  interestsText: "",
-  rolesText: "",
   referrals: [],
 };
 
 export const studentFields: StudentField[] = [
-  "name", "email", "gradYear", "major", "linkedin", "resume", "skills", "interests", "roles", "referrals",
+  "name", "email", "gradYear", "major", "linkedin", "resume", "referrals",
 ];
 
 const EMAIL = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
@@ -94,18 +81,14 @@ function checkField(field: StudentField, a: StudentApplication): string | undefi
       if (!a.resume) return "Upload your resume to continue.";
       if (!resumeRules.types.includes(a.resume.type)) return "Resumes need to be a PDF.";
       return a.resume.size <= resumeRules.maxBytes ? undefined : "That file is over 5 MB.";
-    case "skills":
-      return a.skills.length ? undefined : "Pick or add at least one skill.";
-    case "interests":
-      return a.interests.length ? undefined : "Pick at least one area.";
-    case "roles":
-      return a.roles.length ? undefined : "Pick at least one kind of role.";
     case "referrals": {
       const filled = a.referrals.filter((r) => r.name.trim() || r.email.trim());
       if (filled.length < referralLimits.min) return "Add at least one person.";
       if (filled.length > referralLimits.max) return `Up to ${referralLimits.max} people.`;
       const bad = filled.findIndex((r) => !r.name.trim() || !EMAIL.test(r.email.trim()));
       if (bad >= 0) return `Add a name and a valid email for person ${bad + 1}.`;
+      const outside = filled.findIndex((r) => !isSchoolEmail(r.email));
+      if (outside >= 0) return `Use a @columbia.edu email for person ${outside + 1}.`;
       const emails = filled.map((r) => r.email.trim().toLowerCase());
       if (emails.includes(a.email.trim().toLowerCase())) return "That's your own email. Add someone else.";
       if (new Set(emails).size !== emails.length) return "Each person needs a different email.";
