@@ -5,6 +5,7 @@ import { AnimatePresence, motion } from "framer-motion";
 import { Check, Search, X } from "lucide-react";
 
 import { majorAliases, majorOptions } from "@/content/student-application";
+import { easeOutSoft } from "@/components/motion/easing";
 import { cn } from "@/lib/utils";
 
 const fieldShell =
@@ -79,7 +80,10 @@ export function MajorPicker({
 }) {
   const [query, setQuery] = React.useState(value);
   const [active, setActive] = React.useState(0);
+  // The list folds away once you've picked, and opens again when you search.
+  const [open, setOpen] = React.useState(!majorOptions.includes(value));
   const listRef = React.useRef<HTMLUListElement>(null);
+  const inputRef = React.useRef<HTMLInputElement>(null);
   const picked = majorOptions.includes(value) ? value : null;
 
   const q = query.trim().toLowerCase();
@@ -98,12 +102,21 @@ export function MajorPicker({
     if (row.offsetTop < list.scrollTop) list.scrollTop = row.offsetTop - 4;
     else if (row.offsetTop + row.offsetHeight > list.scrollTop + list.clientHeight)
       list.scrollTop = row.offsetTop + row.offsetHeight - list.clientHeight + 4;
-  }, [active, browsing, picked]);
+  }, [active, browsing, picked, open]);
 
-  function pick(m: string) {
+  function pick(m: string, viaTap = false) {
+    setOpen(false);
     setQuery(m);
     onChange(m);
     setActive(0);
+    // Show the start of a long name, not the end.
+    requestAnimationFrame(() => {
+      const el = inputRef.current;
+      if (!el) return;
+      if (viaTap) el.blur();
+      el.scrollLeft = 0;
+      if (!viaTap) el.setSelectionRange(m.length, m.length);
+    });
   }
 
   return (
@@ -111,9 +124,10 @@ export function MajorPicker({
       <div className={fieldShell}>
         <Search className="ml-4 size-4 shrink-0 text-subtle-foreground" aria-hidden="true" />
         <input
+          ref={inputRef}
           id="answer"
           role="combobox"
-          aria-expanded="true"
+          aria-expanded={open}
           aria-controls="major-list"
           aria-activedescendant={rows.length ? `major-${active}` : undefined}
           autoFocus
@@ -127,6 +141,7 @@ export function MajorPicker({
             const t = e.target.value;
             setQuery(t);
             setActive(0);
+            setOpen(true);
             // Deleting back through your pick keeps it. Typing something new replaces it.
             const keep = picked && picked.toLowerCase().startsWith(t.trim().toLowerCase());
             if (!keep) onChange(t);
@@ -134,13 +149,14 @@ export function MajorPicker({
           onKeyDown={(e) => {
             if (e.key === "ArrowDown" || e.key === "ArrowUp") {
               e.preventDefault();
+              setOpen(true);
               setActive((i) => Math.min(Math.max(i + (e.key === "ArrowDown" ? 1 : -1), 0), rows.length - 1));
-            } else if (e.key === "Enter" && !browsing && rows[active] && rows[active] !== value) {
+            } else if (e.key === "Enter" && open && rows[active] && (!browsing || active > 0 || !picked) && rows[active] !== value) {
               e.preventDefault();
               pick(rows[active]);
             }
           }}
-          className="h-full min-w-0 flex-1 bg-transparent px-3 text-base text-foreground outline-none placeholder:text-subtle-foreground sm:text-[15px]"
+          className="h-full min-w-0 flex-1 truncate bg-transparent px-3 text-base text-foreground outline-none placeholder:text-subtle-foreground sm:text-[15px]"
         />
         <AnimatePresence initial={false}>
           {query && (
@@ -152,6 +168,7 @@ export function MajorPicker({
               exit={{ opacity: 0 }}
               onClick={() => {
                 setQuery("");
+                setOpen(true);
                 document.getElementById("answer")?.focus();
               }}
               className="mr-2 grid size-8 shrink-0 place-items-center rounded-full text-subtle-foreground transition-colors hover:bg-muted hover:text-foreground"
@@ -162,47 +179,56 @@ export function MajorPicker({
         </AnimatePresence>
       </div>
 
-      <ul
-        ref={listRef}
-        id="major-list"
-        role="listbox"
-        aria-label="Majors"
-        className="relative mt-2 max-h-[236px] overflow-y-auto overscroll-contain rounded-xl border border-input p-1 [scrollbar-width:thin]"
-      >
-        {rows.map((m, i) => {
-          const on = m === picked || (custom === m && value === m);
-          const isCustom = custom === m;
-          return (
-            <li
-              key={`${m}-${i}`}
-              id={`major-${i}`}
-              data-row={i}
-              role="option"
-              aria-selected={on}
-              onMouseDown={(e) => e.preventDefault()}
-              onClick={() => pick(m)}
-              onMouseEnter={() => setActive(i)}
-              className={cn(
-                "flex h-11 cursor-pointer items-center gap-2 rounded-lg px-3 text-[15px] transition-colors duration-150 sm:h-10 sm:text-[14.5px]",
-                on ? "bg-columbia-soft text-foreground" : "text-muted-foreground",
-                !on && i === active && !browsing && "bg-muted text-foreground",
-                !on && "hover:bg-muted hover:text-foreground"
-              )}
-            >
-              <span className="min-w-0 flex-1 truncate">
-                {isCustom ? (
-                  <>
-                    Use <span className="font-medium text-foreground">&ldquo;{m}&rdquo;</span>
-                  </>
-                ) : (
-                  <Highlight text={m} q={browsing ? "" : q} />
+      <AnimatePresence initial={false}>
+        {open && rows.length > 0 && (
+        <motion.ul
+          key="list"
+          ref={listRef}
+          initial={{ opacity: 0, height: 0 }}
+          animate={{ opacity: 1, height: "auto" }}
+          exit={{ opacity: 0, height: 0 }}
+          transition={{ duration: 0.35, ease: easeOutSoft }}
+          id="major-list"
+          role="listbox"
+          aria-label="Majors"
+          className="relative mt-2 max-h-[236px] origin-top overflow-y-auto overscroll-contain rounded-xl border border-input p-1 [scrollbar-width:thin]"
+        >
+          {rows.map((m, i) => {
+            const on = m === picked || (custom === m && value === m);
+            const isCustom = custom === m;
+            return (
+              <li
+                key={`${m}-${i}`}
+                id={`major-${i}`}
+                data-row={i}
+                role="option"
+                aria-selected={on}
+                onMouseDown={(e) => e.preventDefault()}
+                onClick={() => pick(m, true)}
+                onMouseEnter={() => setActive(i)}
+                className={cn(
+                  "flex h-11 cursor-pointer items-center gap-2 rounded-lg px-3 text-[15px] transition-colors duration-150 sm:h-10 sm:text-[14.5px]",
+                  on ? "bg-columbia-soft text-foreground" : "text-muted-foreground",
+                  !on && i === active && !browsing && "bg-muted text-foreground",
+                  !on && "hover:bg-muted hover:text-foreground"
                 )}
-              </span>
-              {on && <Check className="size-4 shrink-0 text-cta" aria-hidden="true" />}
-            </li>
-          );
-        })}
-      </ul>
+              >
+                <span className="min-w-0 flex-1 truncate">
+                  {isCustom ? (
+                    <>
+                      Use <span className="font-medium text-foreground">&ldquo;{m}&rdquo;</span>
+                    </>
+                  ) : (
+                    <Highlight text={m} q={browsing ? "" : q} />
+                  )}
+                </span>
+                {on && <Check className="size-4 shrink-0 text-cta" aria-hidden="true" />}
+              </li>
+            );
+          })}
+        </motion.ul>
+        )}
+      </AnimatePresence>
     </div>
   );
 }

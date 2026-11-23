@@ -11,7 +11,7 @@ export const studentQuestions: readonly StudentQuestion[] = [
   { field: "name", title: "What's your name?" },
   { field: "email", title: "What's your Columbia email?" },
   { field: "major", title: "What are you studying?" },
-  { field: "linkedin", title: "Which one is your LinkedIn?" },
+  { field: "linkedin", title: "What's your LinkedIn?" },
   { field: "resume", title: "Can we see your resume?" },
   { field: "referrals", title: "Who would you refer?" },
 ];

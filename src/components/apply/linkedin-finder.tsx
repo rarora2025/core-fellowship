@@ -2,7 +2,7 @@
 
 import * as React from "react";
 import { AnimatePresence, motion } from "framer-motion";
-import { ArrowUpRight, Check } from "lucide-react";
+import { ArrowUpRight, Check, ClipboardPaste } from "lucide-react";
 
 import { LinkedInInput } from "@/components/apply/text-pickers";
 import { easeOutSoft } from "@/components/motion/easing";
@@ -44,6 +44,7 @@ export function LinkedInFinder({
   invalid?: boolean;
 }) {
   const [state, setState] = React.useState<State>({ phase: "loading" });
+  const [pasteNote, setPasteNote] = React.useState<string | null>(null);
 
   React.useEffect(() => {
     const ctrl = new AbortController();
@@ -166,16 +167,37 @@ export function LinkedInFinder({
             id={results.length ? "linkedin-manual" : "answer"}
           />
           {results.length === 0 && (
-            <a
-              href={searchUrl}
-              target="_blank"
-              rel="noreferrer"
-              className="mt-3 inline-flex items-center gap-1 px-1 text-[13px] text-muted-foreground underline-offset-4 transition-colors hover:text-foreground hover:underline"
-            >
-              Find yours on LinkedIn
-              <ArrowUpRight className="size-3.5" aria-hidden="true" />
-            </a>
+            <div className="mt-3 grid grid-cols-2 gap-2">
+              <a
+                href={searchUrl}
+                target="_blank"
+                rel="noreferrer"
+                className="inline-flex h-10 items-center justify-center gap-1.5 rounded-xl bg-muted text-[13.5px] font-medium text-foreground transition-colors hover:bg-columbia-soft"
+              >
+                Search LinkedIn
+                <ArrowUpRight className="size-3.5" aria-hidden="true" />
+              </a>
+              <button
+                type="button"
+                onClick={async () => {
+                  setPasteNote(null);
+                  try {
+                    const text = await navigator.clipboard.readText();
+                    if (/linkedin\.com\/in\//i.test(text)) onChange(text.trim().match(/\S*linkedin\.com\/in\/[^\s?#]+/i)![0]);
+                    else setPasteNote("Copy your profile link first, then tap Paste.");
+                  } catch {
+                    setPasteNote("Paste it into the box above.");
+                    document.getElementById("answer")?.focus();
+                  }
+                }}
+                className="inline-flex h-10 items-center justify-center gap-1.5 rounded-xl bg-muted text-[13.5px] font-medium text-foreground transition-colors hover:bg-columbia-soft"
+              >
+                <ClipboardPaste className="size-3.5" aria-hidden="true" />
+                Paste link
+              </button>
+            </div>
           )}
+          {pasteNote && <p className="mt-2 px-1 text-[13px] text-muted-foreground">{pasteNote}</p>}
         </motion.div>
       )}
     </div>
