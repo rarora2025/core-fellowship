@@ -45,8 +45,8 @@ export default async function PortalHome({
   const first = me.name.trim().split(/\s+/)[0];
   const nextQuestion = profileQuestions.findIndex((q) => !isAnswered(q.field as ProfileField, profile));
 
+  // Applying builds the profile, so there are two steps: the profile, then the conversation.
   const steps = [
-    { label: "Application", done: true, note: "Received" },
     { label: "Profile", done: progress.complete, note: progress.complete ? "Done" : `${progress.done} of ${progress.total}` },
     { label: "Conversation", done: !!booking, note: booking ? "Booked" : "Not booked yet" },
   ];
@@ -89,9 +89,11 @@ export default async function PortalHome({
                 ? "What you're looking for and how you like to work. You can change it any time."
                 : "Quick taps, no essays. About two minutes."}
             </p>
-            <div className="mt-3 h-1 w-40 overflow-hidden rounded-full bg-muted" aria-hidden="true">
-              <div className="h-full rounded-full bg-cta" style={{ width: `${(progress.done / progress.total) * 100}%` }} />
-            </div>
+            {!progress.complete && (
+              <div className="mt-3 h-1 w-40 overflow-hidden rounded-full bg-muted" aria-hidden="true">
+                <div className="h-full rounded-full bg-cta" style={{ width: `${(progress.done / progress.total) * 100}%` }} />
+              </div>
+            )}
           </div>
           <Button asChild variant={progress.complete ? "outline" : "cta"} size="lg" className="h-11 shrink-0 rounded-xl px-5">
             <Link href={progress.complete ? "/portal/profile?review=1" : `/portal/profile?step=${Math.max(nextQuestion, 0)}`}>
