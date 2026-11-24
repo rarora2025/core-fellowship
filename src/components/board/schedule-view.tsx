@@ -15,7 +15,7 @@ import {
   X,
 } from "lucide-react";
 
-import { BoardTabs } from "@/components/board/board-tabs";
+import { BoardHeader } from "@/components/board/board-tabs";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
@@ -60,7 +60,11 @@ export type WeekBooking = {
 
 /** Solid for booked, a tint for free. Written out so Tailwind sees them. */
 const TONES: Record<InterviewerKey, { solid: string; tint: string }> = {
-  core: { solid: "bg-cta text-white", tint: "bg-cta/20 dark:bg-cta/25" },
+  core: {
+    solid: "bg-cta text-white",
+    // Solid (mixed with the card colour), so grid lines never show through a block.
+    tint: "bg-[color-mix(in_srgb,var(--cta)_22%,var(--card))] dark:bg-[color-mix(in_srgb,var(--cta)_30%,var(--card))]",
+  },
 };
 
 const pill =
@@ -295,19 +299,11 @@ export function ScheduleView({
       )}
     >
       {/* Title */}
-      <div className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
-        <div>
-          <p className="text-[13px] font-semibold uppercase tracking-[0.1em] text-brand-deep">
-            Board
-          </p>
-          <h1 className="mt-1 font-display text-[clamp(1.9rem,1.4rem+1.8vw,2.7rem)] font-bold leading-[1.05] tracking-[-0.03em]">
-            Schedule
-          </h1>
-          <div className="mt-4">
-            <BoardTabs active="schedule" />
-          </div>
-        </div>
-      </div>
+      <BoardHeader
+        title="Schedule"
+        active="schedule"
+        subtitle="CORE's interview times. You're both on every conversation."
+      />
 
       {/* Week, and Edit */}
       <div className="mt-8 flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
@@ -473,12 +469,12 @@ export function ScheduleView({
                 <React.Fragment key={r}>
                   <div
                     className={cn(
-                      "sticky left-0 z-10 bg-card pr-2 text-right",
+                      "sticky left-0 z-10 h-[22px] bg-card pr-2 text-right leading-none",
                       onHour && "border-t border-border",
                     )}
                   >
                     {onHour && (
-                      <span className="relative -top-2 text-[11px] text-subtle-foreground">
+                      <span className="relative -top-[6px] text-[11px] text-subtle-foreground">
                         {formatTime(sample).replace(":00", "")}
                       </span>
                     )}
@@ -486,6 +482,17 @@ export function ScheduleView({
                   {columns.map((cells, c) => {
                     const iso = cells[r];
                     const past = isPast(iso);
+                    const k = visible[0];
+                    const isBooked = (x?: string) => !!x && booked.has(`${k}|${x}`);
+                    const isFree = (x?: string) =>
+                      !!x && !isBooked(x) && (editing ? draft.has(x) : free.has(`${k}|${x}`));
+                    const b = booked.get(`${k}|${iso}`);
+                    const loc = editing ? draft.get(iso) : free.get(`${k}|${iso}`);
+                    const on = !b && !!loc;
+                    // Back-to-back free times join into one rounded block.
+                    const joinUp = on && isFree(cells[r - 1]);
+                    const joinDown = on && isFree(cells[r + 1]);
+                    const lockedHere = past || !!b;
                     return (
                       <div
                         key={iso}
@@ -493,66 +500,52 @@ export function ScheduleView({
                         data-col={c}
                         data-row={r}
                         className={cn(
-                          "relative flex h-[22px] gap-px border-l border-border",
+                          "group/cell relative h-[22px] border-l border-border",
                           onHour ? "border-t" : "border-t border-t-border/40",
                           past && "bg-muted/50",
-                          editing && !past && canPaint && "cursor-pointer",
+                          editing && !lockedHere && canPaint && "cursor-pointer",
                         )}
-                        title={`${days[c]} ${formatTime(iso)}`}
+                        title={b ? undefined : `${days[c]} ${formatTime(iso)}`}
                       >
-                        {visible
-                          .filter(
-                            (k) =>
-                              visible.length === 1 ||
-                              booked.has(`${k}|${iso}`) ||
-                              (editing === k
-                                ? draft.has(iso)
-                                : free.has(`${k}|${iso}`)),
-                          )
-                          .map((k) => {
-                            const b = booked.get(`${k}|${iso}`);
-                            const loc =
-                              editing === k
-                                ? draft.get(iso)
-                                : free.get(`${k}|${iso}`);
-                            if (b) {
-                              return (
-                                <button
-                                  key={k}
-                                  type="button"
-                                  title={`${b.name} · ${formatRange(b)}`}
-                                  disabled={!!editing}
-                                  onClick={() => setOpen(b)}
-                                  className={cn(
-                                    "flex min-w-0 flex-1 items-center rounded-[5px] px-1.5 text-left text-[11px] font-medium outline-none transition-[filter] focus-visible:ring-2 focus-visible:ring-ring/60 enabled:hover:brightness-95",
-                                    TONES[k].solid,
-                                  )}
-                                >
-                                  <span className="truncate">{b.name}</span>
-                                </button>
-                              );
-                            }
-                            if (loc) {
-                              return (
-                                <span
-                                  key={k}
-                                  className={cn(
-                                    "flex min-w-0 flex-1 items-center justify-end rounded-[4px] pr-1",
-                                    TONES[k].tint,
-                                    past && "opacity-50",
-                                  )}
-                                >
-                                  {placeOf({ location: loc }).url && (
-                                    <Video
-                                      className="size-2.5 opacity-60"
-                                      aria-label="Google Meet"
-                                    />
-                                  )}
-                                </span>
-                              );
-                            }
-                            return <span key={k} className="flex-1" />;
-                          })}
+                        {/* Free time: always drawn, faded in and out so painting feels smooth. */}
+                        <span
+                          aria-hidden="true"
+                          className={cn(
+                            "pointer-events-none absolute inset-x-[3px] flex items-end justify-end pr-1 transition-[opacity,top,bottom,border-radius] duration-200 ease-out",
+                            TONES[k].tint,
+                            on ? (past ? "opacity-50" : "opacity-100") : "opacity-0",
+                            joinUp ? "-top-px rounded-t-none" : "top-[2px] rounded-t-[7px]",
+                            joinDown ? "bottom-0 rounded-b-none" : "bottom-[2px] rounded-b-[7px]",
+                          )}
+                        >
+                          {on && !joinDown && loc && placeOf({ location: loc }).url && (
+                            <Video className="mb-[3px] size-2.5 text-brand-deep opacity-70" aria-label="Google Meet" />
+                          )}
+                        </span>
+
+                        {/* While editing, the box under the pointer lights up. */}
+                        {editing && !lockedHere && canPaint && (
+                          <span
+                            aria-hidden="true"
+                            className="pointer-events-none absolute inset-x-[3px] inset-y-[2px] rounded-[7px] opacity-0 ring-2 ring-inset ring-cta/60 transition-opacity duration-150 group-hover/cell:opacity-100"
+                          />
+                        )}
+
+                        {b && (
+                          <button
+                            type="button"
+                            title={`${b.name} · ${formatRange(b)}`}
+                            disabled={!!editing}
+                            onClick={() => setOpen(b)}
+                            className={cn(
+                              "absolute inset-x-[3px] inset-y-[1px] z-[1] flex items-center rounded-[7px] px-1.5 text-left text-[11px] font-semibold shadow-[0_2px_6px_-2px_rgb(var(--shadow-color)/0.35)] outline-none transition-[transform,box-shadow] duration-200 ease-out focus-visible:ring-2 focus-visible:ring-ring/60 enabled:hover:-translate-y-px enabled:hover:shadow-[0_6px_14px_-6px_rgb(var(--shadow-color)/0.5)]",
+                              TONES[k].solid,
+                            )}
+                          >
+                            <span className="truncate">{b.name}</span>
+                          </button>
+                        )}
+
                         {gBusy.has(iso) && (
                           <span
                             aria-hidden="true"

@@ -6,7 +6,7 @@ import { AnimatePresence, motion, useReducedMotion } from "framer-motion";
 import { ChevronDown, Download, ExternalLink, FileText, Search, X } from "lucide-react";
 
 import { CoreBulb } from "@/components/brand/core-bulb";
-import { BoardTabs } from "@/components/board/board-tabs";
+import { BoardHeader, onBluePill } from "@/components/board/board-tabs";
 import { Input } from "@/components/ui/input";
 import { easeOutSoft } from "@/components/motion/easing";
 import { portalCard } from "@/components/portal/ui";
@@ -17,8 +17,6 @@ import { cn } from "@/lib/utils";
 
 const chip = "rounded-full bg-columbia-soft px-2.5 py-0.5 text-[13px] text-columbia-ink dark:bg-brand/15 dark:text-foreground";
 const quiet = "text-[13px] text-subtle-foreground";
-const pill =
-  "inline-flex h-10 items-center gap-1.5 rounded-full border border-border bg-card px-4 text-[14px] transition-colors hover:bg-muted";
 const selectClass =
   "h-11 w-full appearance-none rounded-xl border border-input bg-card pl-3.5 pr-9 text-[14px] outline-none transition-colors hover:bg-muted focus-visible:ring-[3px] focus-visible:ring-ring/50";
 // Written out in full so Tailwind sees them.
@@ -428,26 +426,24 @@ export function BoardView({
   return (
     <main id="main" className="mx-auto w-full max-w-[1200px] px-4 pb-24 pt-10 sm:px-8 sm:pt-12">
       {/* Title */}
-      <div className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
-        <div>
-          <p className="text-[13px] font-semibold uppercase tracking-[0.1em] text-brand-deep">Board</p>
-          <h1 className="mt-1 font-display text-[clamp(1.9rem,1.4rem+1.8vw,2.7rem)] font-bold leading-[1.05] tracking-[-0.03em]">Applicants</h1>
-          <div className="mt-4">
-            <BoardTabs active="applicants" />
-          </div>
-        </div>
-        <div className="flex gap-2">
-          <a href="/api/board/export" className={pill}>
-            <Download className="size-4" aria-hidden="true" />
-            Export CSV
-          </a>
-          {canSignOut && (
-            <button type="button" onClick={signOut} className={cn(pill, "text-muted-foreground")}>
-              Sign out
-            </button>
-          )}
-        </div>
-      </div>
+      <BoardHeader
+        title="Applicants"
+        active="applicants"
+        subtitle={`${counts.all} applied · ${counts["Coming up"]} coming up · ${counts.Interviewed} interviewed`}
+        actions={
+          <>
+            <a href="/api/board/export" className={onBluePill}>
+              <Download className="size-4" aria-hidden="true" />
+              Export CSV
+            </a>
+            {canSignOut && (
+              <button type="button" onClick={signOut} className={cn(onBluePill, "text-white/85")}>
+                Sign out
+              </button>
+            )}
+          </>
+        }
+      />
 
       {/* Numbers, which also filter */}
       <div role="radiogroup" aria-label="Show" className="mt-8 grid grid-cols-2 gap-2.5 md:grid-cols-4">
