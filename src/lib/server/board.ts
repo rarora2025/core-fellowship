@@ -4,7 +4,7 @@ import { createHash, timingSafeEqual } from "node:crypto";
 import { cookies, headers } from "next/headers";
 
 import { interviewers } from "@/content/interviews";
-import { findSlot, interviewerOf, type Slot } from "@/lib/interviews";
+import { findIn, interviewerOf, slotsFrom, type Slot } from "@/lib/interviews";
 import { sanitizeProfile, type StudentProfile } from "@/lib/profile";
 import { store } from "@/lib/server/store";
 
@@ -85,11 +85,12 @@ export type Applicant = {
 const str = (v: unknown) => (typeof v === "string" ? v : Array.isArray(v) ? v.filter((x) => typeof x === "string").join(", ") : "");
 
 export async function loadApplicants(): Promise<Applicant[]> {
-  const [apps, profiles, bookings] = await Promise.all([store.allApplications(), store.allProfiles(), store.bookings()]);
+  const [apps, profiles, bookings, windows] = await Promise.all([store.allApplications(), store.allProfiles(), store.bookings(), store.windows()]);
+  const slots = slotsFrom(windows);
   const slotOf: Record<string, string> = {};
   for (const [slotId, appId] of Object.entries(bookings)) slotOf[appId] = slotId;
   return apps.map(({ id, receivedAt, application: a }) => {
-    const slot = slotOf[id] ? findSlot(slotOf[id]) : null;
+    const slot = slotOf[id] ? findIn(slots, slotOf[id]) : null;
     const resume = a.resume as { id?: string } | null;
     const referrals = Array.isArray(a.referrals) ? (a.referrals as { name?: unknown; email?: unknown }[]) : [];
     return {

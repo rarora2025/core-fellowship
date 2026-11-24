@@ -4,7 +4,7 @@ import { randomBytes } from "node:crypto";
 import { cookies } from "next/headers";
 
 import { emptyProfile, sanitizeProfile, type StudentProfile } from "@/lib/profile";
-import { findSlot, isOpen, type Slot } from "@/lib/interviews";
+import { findIn, isOpen, slotsFrom, type Slot } from "@/lib/interviews";
 import { sendBookingInvites } from "@/lib/server/invites";
 import { store } from "@/lib/server/store";
 
@@ -84,10 +84,15 @@ export async function saveProfile(id: string, profile: StudentProfile) {
 
 /* ---------- interviews ---------- */
 
-export async function bookingFor(id: string): Promise<Slot | null> {
+/** Every bookable slot, cut from the free blocks set on the board. */
+export async function loadSlots(): Promise<Slot[]> {
+  return slotsFrom(await store.windows());
+}
+
+export async function bookingFor(id: string, slots?: Slot[]): Promise<Slot | null> {
   const bookings = await store.bookings();
   const slotId = Object.keys(bookings).find((k) => bookings[k] === id);
-  return slotId ? findSlot(slotId) : null;
+  return slotId ? findIn(slots ?? (await loadSlots()), slotId) : null;
 }
 
 export async function takenSlotIds(): Promise<string[]> {
@@ -103,10 +108,11 @@ export class BookingError extends Error {}
  */
 export async function bookSlot(me: PortalStudent, slotId: string) {
   const id = me.id;
-  const slot = findSlot(slotId);
+  const slots = await loadSlots();
+  const slot = findIn(slots, slotId);
   if (!slot) throw new BookingError("That time doesn't exist anymore. Pick another.");
   if (!isOpen(slot)) throw new BookingError("That time is too soon to book. Pick a later one.");
-  const current = await bookingFor(id);
+  const current = await bookingFor(id, slots);
   if (current && current.id !== slotId && !isOpen(current)) {
     throw new BookingError("Your interview is too soon to move. Email us instead.");
   }

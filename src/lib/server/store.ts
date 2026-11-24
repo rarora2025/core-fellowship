@@ -1,6 +1,8 @@
 import "server-only";
 
 import { randomUUID } from "node:crypto";
+
+import type { InterviewerKey, InterviewWindow } from "@/content/interviews";
 import { mkdir, readdir, readFile, rename, stat, writeFile } from "node:fs/promises";
 import path from "node:path";
 
@@ -123,6 +125,29 @@ const supabase = {
     const rows: { application_id: string; profile: unknown }[] = await sb("/rest/v1/profiles?select=application_id,profile&limit=5000");
     return Object.fromEntries(rows.map((r) => [r.application_id, r.profile]));
   },
+  async windows(): Promise<InterviewWindow[]> {
+    const rows: { interviewer: InterviewerKey; starts_at: string; ends_at: string; location: string }[] = await sb(
+      "/rest/v1/interview_windows?select=interviewer,starts_at,ends_at,location&order=starts_at&limit=5000"
+    );
+    return rows.map((r) => ({
+      interviewer: r.interviewer,
+      start: new Date(r.starts_at).toISOString(),
+      end: new Date(r.ends_at).toISOString(),
+      location: r.location,
+    }));
+  },
+  /** One person's free blocks inside [from, to), replaced in one step. */
+  async replaceWindows(interviewer: InterviewerKey, from: string, to: string, windows: InterviewWindow[]) {
+    await sb("/rest/v1/rpc/replace_windows", {
+      method: "POST",
+      body: JSON.stringify({
+        p_interviewer: interviewer,
+        p_from: from,
+        p_to: to,
+        p_windows: windows.map((w) => ({ start: w.start, end: w.end, location: w.location })),
+      }),
+    });
+  },
   /** A link to the PDF that works for ten minutes. */
   async resume(id: string): Promise<{ url: string } | null> {
     const res = await sb(`/storage/v1/object/sign/resumes/${q(id)}.pdf`, {
@@ -144,6 +169,7 @@ const STUDENTS = path.join(ROOT, "students");
 const PROFILES = path.join(ROOT, "profiles");
 const TOKENS = path.join(ROOT, "portal", "tokens.json");
 const BOOKINGS = path.join(ROOT, "bookings.json");
+const WINDOWS = path.join(ROOT, "windows.json");
 
 async function readJson<T>(file: string, fallback: T): Promise<T> {
   try {
@@ -242,6 +268,16 @@ const files = {
     }
     return out;
   },
+  async windows(): Promise<InterviewWindow[]> {
+    return readJson<InterviewWindow[]>(WINDOWS, []);
+  },
+  replaceWindows(interviewer: InterviewerKey, from: string, to: string, windows: InterviewWindow[]) {
+    return locked(async () => {
+      const all = await readJson<InterviewWindow[]>(WINDOWS, []);
+      const keep = all.filter((w) => !(w.interviewer === interviewer && w.start >= from && w.start < to));
+      await writeJson(WINDOWS, [...keep, ...windows].sort((a, b) => a.start.localeCompare(b.start)));
+    });
+  },
   async resume(id: string): Promise<{ bytes: Uint8Array } | null> {
     try {
       return { bytes: await readFile(path.join(RESUMES, `${id}.pdf`)) };
@@ -268,6 +304,10 @@ export const store = {
   /** Book or move. False when someone else already holds the slot. */
   book: (applicationId: string, slotId: string) => backend.book(applicationId, slotId),
   cancel: (applicationId: string) => backend.cancel(applicationId),
+  /** Free blocks of interview time, set on the board's Schedule tab. */
+  windows: () => backend.windows(),
+  replaceWindows: (interviewer: InterviewerKey, from: string, to: string, windows: InterviewWindow[]) =>
+    backend.replaceWindows(interviewer, from, to, windows),
   /** Board only. */
   allApplications: () => backend.allApplications(),
   allProfiles: () => backend.allProfiles(),

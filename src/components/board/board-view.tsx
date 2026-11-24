@@ -6,6 +6,7 @@ import { AnimatePresence, motion, useReducedMotion } from "framer-motion";
 import { ChevronDown, Download, ExternalLink, FileText, Search, X } from "lucide-react";
 
 import { CoreBulb } from "@/components/brand/core-bulb";
+import { BoardTabs } from "@/components/board/board-tabs";
 import { Input } from "@/components/ui/input";
 import { easeOutSoft } from "@/components/motion/easing";
 import { portalCard } from "@/components/portal/ui";
@@ -438,6 +439,9 @@ export function BoardView({
         <div>
           <p className="text-[13px] font-semibold uppercase tracking-[0.1em] text-brand-deep">Board</p>
           <h1 className="mt-1 font-display text-[clamp(1.9rem,1.4rem+1.8vw,2.7rem)] font-bold leading-[1.05] tracking-[-0.03em]">Applicants</h1>
+          <div className="mt-4">
+            <BoardTabs active="applicants" />
+          </div>
         </div>
         <div className="flex gap-2">
           <a href="/api/board/export" className={pill}>

@@ -1,8 +1,8 @@
 /**
- * Interview slots, generated from the windows in content/interviews.
+ * Interview slots, cut from the free blocks kept in the database.
  * Pure functions, so the server and the browser agree on ids and times.
  */
-import { interviewConfig, interviewers, interviewWindows, type InterviewerKey, type InterviewWindow } from "@/content/interviews";
+import { interviewConfig, interviewers, type InterviewerKey, type InterviewWindow } from "@/content/interviews";
 
 export type Slot = {
   /** Stable id: start time in UTC and who interviews, e.g. 2026-12-01T19:00Z-dev */
@@ -31,7 +31,7 @@ function tzOffset(at: number, timeZone: string) {
 }
 
 /** "2026-12-01" + "14:00" in the configured zone → UTC ms. */
-function zoned(date: string, time: string, timeZone = interviewConfig.timeZone) {
+export function zoned(date: string, time: string, timeZone = interviewConfig.timeZone) {
   const [y, m, d] = date.split("-").map(Number);
   const [hh, mm] = time.split(":").map(Number);
   const guess = Date.UTC(y, m - 1, d, hh, mm);
@@ -39,25 +39,76 @@ function zoned(date: string, time: string, timeZone = interviewConfig.timeZone) 
   return guess - tzOffset(first, timeZone);
 }
 
+export const SLOT_MS = interviewConfig.slotMinutes * 60_000;
+
+export function slotId(startIso: string, interviewer: InterviewerKey) {
+  return `${new Date(startIso).toISOString().slice(0, 16)}Z-${interviewer}`;
+}
+
 function slotsFor(w: InterviewWindow): Slot[] {
-  const step = interviewConfig.slotMinutes * 60_000;
-  const end = zoned(w.date, w.end);
+  const end = new Date(w.end).getTime();
   const out: Slot[] = [];
-  for (let t = zoned(w.date, w.start); t + step <= end; t += step) {
+  for (let t = new Date(w.start).getTime(); t + SLOT_MS <= end; t += SLOT_MS) {
     const iso = new Date(t).toISOString();
-    out.push({
-      id: `${iso.slice(0, 16)}Z-${w.interviewer}`,
-      start: iso,
-      end: new Date(t + step).toISOString(),
-      location: w.location,
-      interviewer: w.interviewer,
-    });
+    out.push({ id: slotId(iso, w.interviewer), start: iso, end: new Date(t + SLOT_MS).toISOString(), location: w.location, interviewer: w.interviewer });
   }
   return out;
 }
 
-export function allSlots(): Slot[] {
-  return interviewWindows.flatMap(slotsFor).sort((a, b) => a.start.localeCompare(b.start));
+/** Every bookable slot in these free blocks, earliest first. */
+export function slotsFrom(windows: InterviewWindow[]): Slot[] {
+  return windows.flatMap(slotsFor).sort((a, b) => a.start.localeCompare(b.start) || a.interviewer.localeCompare(b.interviewer));
+}
+
+/* ---------- New York calendar arithmetic (for the Schedule grid) ---------- */
+
+const ny = (iso: string, o: Intl.DateTimeFormatOptions) =>
+  new Intl.DateTimeFormat("en-CA", { timeZone: interviewConfig.timeZone, ...o }).format(new Date(iso));
+
+/** "2026-12-01" for the New York day an instant falls on. */
+export function nyDate(iso: string) {
+  return ny(iso, { year: "numeric", month: "2-digit", day: "2-digit" });
+}
+
+/** "14:20" in New York. */
+export function nyTime(iso: string) {
+  return ny(iso, { hour: "2-digit", minute: "2-digit", hourCycle: "h23" });
+}
+
+export function addDays(date: string, n: number) {
+  const [y, m, d] = date.split("-").map(Number);
+  return new Date(Date.UTC(y, m - 1, d + n)).toISOString().slice(0, 10);
+}
+
+/** The Monday of the week a date is in. */
+export function mondayOf(date: string) {
+  const [y, m, d] = date.split("-").map(Number);
+  const dow = new Date(Date.UTC(y, m - 1, d)).getUTCDay(); // 0 = Sunday
+  return addDays(date, -((dow + 6) % 7));
+}
+
+/** Every slot start on one New York day between dayStart and dayEnd, as ISO. */
+export function dayCells(date: string) {
+  const out: string[] = [];
+  const end = zoned(date, interviewConfig.dayEnd);
+  for (let t = zoned(date, interviewConfig.dayStart); t + SLOT_MS <= end; t += SLOT_MS) out.push(new Date(t).toISOString());
+  return out;
+}
+
+/** Back-to-back cells (ISO starts) with the same place become free blocks. */
+export function blocksFrom(cells: { start: string; location: string }[], interviewer: InterviewerKey): InterviewWindow[] {
+  const sorted = [...cells].sort((a, b) => a.start.localeCompare(b.start));
+  const out: InterviewWindow[] = [];
+  for (const c of sorted) {
+    const startMs = new Date(c.start).getTime();
+    const last = out[out.length - 1];
+    if (last && new Date(last.end).getTime() === startMs && last.location === c.location) {
+      last.end = new Date(startMs + SLOT_MS).toISOString();
+    } else {
+      out.push({ interviewer, start: new Date(startMs).toISOString(), end: new Date(startMs + SLOT_MS).toISOString(), location: c.location });
+    }
+  }
+  return out;
 }
 
 /** Where a time happens: a room, or a Google Meet link shown as "Google Meet". */
@@ -70,8 +121,8 @@ export function interviewerOf(slot: Slot) {
   return interviewers[slot.interviewer];
 }
 
-export function findSlot(id: string) {
-  return allSlots().find((s) => s.id === id) ?? null;
+export function findIn(slots: Slot[], id: string) {
+  return slots.find((s) => s.id === id) ?? null;
 }
 
 /** A slot can be booked or changed until `lockHours` before it starts. */
