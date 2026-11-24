@@ -262,7 +262,16 @@ function Picker<T extends string>({
 }
 
 /** Everyone who applied, as a table: search, sort, group into pools, open anyone for the full picture. */
-export function BoardView({ applicants, interviewers }: { applicants: Applicant[]; interviewers: string[] }) {
+export function BoardView({
+  applicants,
+  interviewers,
+  canSignOut = true,
+}: {
+  applicants: Applicant[];
+  interviewers: string[];
+  /** Off on localhost, where the board is always open. */
+  canSignOut?: boolean;
+}) {
   const router = useRouter();
   const [q, setQ] = React.useState("");
   const [who, setWho] = React.useState<string>("Everyone");
@@ -332,9 +341,11 @@ export function BoardView({ applicants, interviewers }: { applicants: Applicant[
             <Download className="size-4" aria-hidden="true" />
             Export CSV
           </a>
-          <button type="button" onClick={signOut} className={cn(linkClass, "text-muted-foreground")}>
-            Sign out
-          </button>
+          {canSignOut && (
+            <button type="button" onClick={signOut} className={cn(linkClass, "text-muted-foreground")}>
+              Sign out
+            </button>
+          )}
         </div>
       </div>
 

@@ -1,7 +1,7 @@
 import "server-only";
 
 import { createHash, timingSafeEqual } from "node:crypto";
-import { cookies } from "next/headers";
+import { cookies, headers } from "next/headers";
 
 import { interviewers } from "@/content/interviews";
 import { findSlot, interviewerOf, type Slot } from "@/lib/interviews";
@@ -13,8 +13,26 @@ import { store } from "@/lib/server/store";
  * password, BOARD_PASSWORD, set in .env.local or Vercel. Without it the
  * board stays locked. The cookie holds a hash of the password, so
  * changing the password signs everyone out.
+ *
+ * On localhost (`npm run dev`) the board is always open, so whoever is
+ * building the site can switch between the board and the student side
+ * freely. The live site (a production build) always asks for the password.
  */
 export const BOARD_COOKIE = "core_board";
+
+/** `npm run dev`. The board is only open without a password when it's also opened as localhost. */
+export const openForDevelopers = process.env.NODE_ENV === "development";
+
+/** Opened on this machine itself, not from another device on the same Wi-Fi. */
+async function onThisMachine() {
+  const host = ((await headers()).get("host") ?? "").toLowerCase();
+  return /^(localhost|127\.0\.0\.1|\[::1\])(:\d+)?$/.test(host);
+}
+
+/** True when the board is open without a password (developing on localhost). */
+export async function developerAccess() {
+  return openForDevelopers && (await onThisMachine());
+}
 
 function hashOf(password: string) {
   return createHash("sha256").update(`core-board:${password}`).digest("hex");
@@ -33,6 +51,7 @@ export function checkBoardPassword(password: string) {
 }
 
 export async function onBoard() {
+  if (await developerAccess()) return true;
   const real = process.env.BOARD_PASSWORD;
   if (!real) return false;
   const got = (await cookies()).get(BOARD_COOKIE)?.value ?? "";

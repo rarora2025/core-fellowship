@@ -24,7 +24,9 @@ real Supabase project. What's left needs the domain.
   authorization, interview status or interviewer), filter to one
   interviewer, and click anyone for their full profile, resume, LinkedIn and
   work link. Export CSV for startups. Once signed in, a "Board" link shows in
-  the top bar; on the board, "Student view" goes back.
+  the top bar; on the board, "Student view" goes back. On localhost
+  (`npm run dev`, opened as localhost) the board is always open with no
+  password, so the switch is always there while you build.
 - **Supabase** project `core-fellowship`: `supabase/schema.sql` is applied.
   Resumes are in a private bucket. Nothing is readable without the server
   key. `applicant_overview` in the Table Editor is one row per applicant.
