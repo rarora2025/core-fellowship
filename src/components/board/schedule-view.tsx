@@ -5,6 +5,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { AnimatePresence, motion, useReducedMotion } from "framer-motion";
 import {
+  CalendarDays,
   ChevronLeft,
   ChevronRight,
   Loader2,
@@ -37,6 +38,15 @@ import {
   slotsFrom,
   zoned,
 } from "@/lib/interviews";
+import {
+  askGoogle,
+  busyCells,
+  busyFromConnected,
+  googleConnected,
+  loadGoogle,
+  warmGoogle,
+  type GoogleProblem,
+} from "@/lib/google-calendar";
 import { cn } from "@/lib/utils";
 
 export type WeekBooking = {
@@ -95,6 +105,10 @@ export function ScheduleView({
   const [error, setError] = React.useState<string | null>(null);
   const [saved, setSaved] = React.useState<string | null>(null);
   const [open, setOpen] = React.useState<WeekBooking | null>(null);
+  // Google Calendar: busy times read in this browser only, never saved.
+  const [gcal, setGcal] = React.useState<"off" | "loading" | "on">("off");
+  const [gBusy, setGBusy] = React.useState<Set<string>>(new Set());
+  const [gNote, setGNote] = React.useState<string | null>(null);
   // A drag marks (or clears) the whole box from where it started to the pointer, like when2meet.
   const drag = React.useRef<{
     mode: "add" | "remove";
@@ -108,6 +122,62 @@ export function ScheduleView({
   );
   const columns = React.useMemo(() => days.map((d) => dayCells(d)), [days]);
   const rows = columns[0]?.length ?? 0;
+
+  const weekFrom = new Date(zoned(week, "00:00")).toISOString();
+  const weekTo = new Date(zoned(addDays(week, 7), "00:00")).toISOString();
+  const allCells = React.useMemo(() => columns.flat(), [columns]);
+
+  // Fetch Google's script early so its window can open in the same instant as the click.
+  React.useEffect(() => {
+    warmGoogle();
+    loadGoogle();
+  }, []);
+
+  const drawBusy = React.useCallback(async () => {
+    const busy = await busyFromConnected(weekFrom, weekTo);
+    if (!busy) {
+      setGcal("off");
+      setGNote("Google didn't answer. Press Show my Google Calendar again.");
+      return;
+    }
+    setGBusy(busyCells(allCells, interviewConfig.slotMinutes, busy));
+    setGcal("on");
+    setGNote(null);
+  }, [weekFrom, weekTo, allCells]);
+
+  // A new week while it's on: redraw without asking Google again.
+  React.useEffect(() => {
+    if (gcal === "on" && googleConnected()) void drawBusy();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [week]);
+
+  async function toggleGoogle() {
+    if (gcal === "on") {
+      setGcal("off");
+      setGBusy(new Set());
+      return;
+    }
+    setGNote(null);
+    setGcal("loading");
+    if (!googleConnected()) {
+      if (!(await loadGoogle())) {
+        setGcal("off");
+        return setGNote("Couldn't reach Google. Check your connection and try again.");
+      }
+      const res = await askGoogle();
+      if ("problem" in res) {
+        setGcal("off");
+        const why: Record<GoogleProblem, string> = {
+          blocked: "Your browser blocked Google's window. Allow pop-ups for this site and try again.",
+          closed: "Google's window was closed before you finished.",
+          denied: "Google wasn't given permission, so nothing is shown.",
+          failed: "Google didn't connect. Try again.",
+        };
+        return setGNote(why[res.problem]);
+      }
+    }
+    await drawBusy();
+  }
 
   // What's free and what's booked, by "interviewer|start".
   const free = React.useMemo(() => {
@@ -270,12 +340,24 @@ export function ScheduleView({
           )}
         </div>
 
-        {!editing && (
-          <Button variant="cta" className="h-10 self-start rounded-full px-4" onClick={() => startEditing(visible[0])}>
-            <Pencil className="size-4" />
-            Edit times
-          </Button>
-        )}
+        <div className="flex flex-wrap items-center gap-2">
+          <button
+            type="button"
+            onClick={toggleGoogle}
+            disabled={gcal === "loading"}
+            aria-pressed={gcal === "on"}
+            className={cn(pill, gcal === "on" && "border-red-300 bg-red-50 text-red-700 dark:border-red-400/40 dark:bg-red-500/10 dark:text-red-300")}
+          >
+            {gcal === "loading" ? <Loader2 className="size-4 animate-spin" /> : <CalendarDays className="size-4" />}
+            {gcal === "on" ? "Hide my Google Calendar" : "Show my Google Calendar"}
+          </button>
+          {!editing && (
+            <Button variant="cta" className="h-10 rounded-full px-4" onClick={() => startEditing(visible[0])}>
+              <Pencil className="size-4" />
+              Edit times
+            </Button>
+          )}
+        </div>
       </div>
 
       <p className="mt-4 text-[14px] text-muted-foreground">
@@ -293,6 +375,11 @@ export function ScheduleView({
           </>
         )}
       </p>
+      {gNote && (
+        <p role="status" className="mt-2 text-[14px] text-red-700 dark:text-red-300">
+          {gNote}
+        </p>
+      )}
       <AnimatePresence>
         {saved && !editing && (
           <motion.p
@@ -406,7 +493,7 @@ export function ScheduleView({
                         data-col={c}
                         data-row={r}
                         className={cn(
-                          "flex h-[22px] gap-px border-l border-border",
+                          "relative flex h-[22px] gap-px border-l border-border",
                           onHour ? "border-t" : "border-t border-t-border/40",
                           past && "bg-muted/50",
                           editing && !past && canPaint && "cursor-pointer",
@@ -466,6 +553,16 @@ export function ScheduleView({
                             }
                             return <span key={k} className="flex-1" />;
                           })}
+                        {gBusy.has(iso) && (
+                          <span
+                            aria-hidden="true"
+                            className="pointer-events-none absolute inset-0 border-l-2 border-red-500/80"
+                            style={{
+                              backgroundImage:
+                                "repeating-linear-gradient(135deg, rgb(239 68 68 / 0.28) 0 4px, transparent 4px 8px)",
+                            }}
+                          />
+                        )}
                       </div>
                     );
                   })}
@@ -487,6 +584,16 @@ export function ScheduleView({
         <span className="flex items-center gap-1.5 text-[13px] text-muted-foreground">
           <Video className="size-3" aria-hidden="true" /> Google Meet
         </span>
+        {gcal === "on" && (
+          <span className="flex items-center gap-1.5 text-[13px] text-muted-foreground">
+            <span
+              aria-hidden="true"
+              className="h-3 w-5 rounded-[4px] border-l-2 border-red-500/80"
+              style={{ backgroundImage: "repeating-linear-gradient(135deg, rgb(239 68 68 / 0.28) 0 4px, transparent 4px 8px)" }}
+            />
+            Busy on your Google Calendar (only you see this)
+          </span>
+        )}
       </div>
 
       {/* The week as a list, easier on a phone */}

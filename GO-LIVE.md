@@ -26,7 +26,11 @@ real Supabase project. What's left needs the domain.
   book them straight away. Booked and past times are locked. Click a booked
   conversation to cancel it: the student is emailed their private link to
   pick a new time (with an optional note), and you both get the calendar
-  cancellation.
+  cancellation. "Show my Google Calendar" stripes the
+  times you're busy in red, read in your own browser (never saved or sent
+  to the site). It uses LionApps' Google sign-in client for now, which
+  allows localhost:3000; for the live site, add its address there or set
+  `NEXT_PUBLIC_GOOGLE_CLIENT_ID` to CORE's own.
 - **Board** (`/board`, one shared password): everyone who applied as a
   table. Search, sort, group into pools (by role, space, year, where, work
   authorization, interview status), and click anyone for their full
