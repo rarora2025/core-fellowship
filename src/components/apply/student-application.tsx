@@ -228,11 +228,17 @@ export function StudentApplicationForm({ initialEmail = "" }: { initialEmail?: s
           Thanks{first ? `, ${first}` : ""}.
         </h1>
         <p className="mt-4 max-w-sm text-[15px] leading-relaxed text-muted-foreground">
-          We got your application and will reach out at <span className="text-foreground">{data.email}</span>.
+          We got your application. Next, fill in your profile and pick a time to talk with us.
         </p>
         <Button asChild variant="cta" size="lg" className="mt-10 h-12 rounded-xl px-8">
-          <Link href="/">Back home</Link>
+          <Link href="/portal/profile">
+            Build your profile
+            <ArrowRight className="transition-transform duration-300 group-hover/button:translate-x-0.5" />
+          </Link>
         </Button>
+        <Link href="/portal" className="mt-4 text-[14px] text-muted-foreground underline-offset-4 hover:text-foreground hover:underline">
+          Go to my portal
+        </Link>
       </motion.div>
     );
   }

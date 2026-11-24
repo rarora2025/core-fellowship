@@ -6,6 +6,7 @@ import {
   type StudentApplication,
 } from "@/lib/applications/student";
 import { resumeExists, saveStudentApplication } from "@/lib/server/submissions";
+import { createPortalToken, SESSION_COOKIE, sessionCookie } from "@/lib/server/portal";
 
 export const runtime = "nodejs";
 
@@ -31,5 +32,11 @@ export async function POST(request: Request) {
   }
 
   const id = await saveStudentApplication(application);
-  return NextResponse.json({ ok: true, id }, { status: 201 });
+
+  // Sign the student into their portal right away, and hand back a
+  // private link they can use to get back in later.
+  const token = await createPortalToken(id);
+  const res = NextResponse.json({ ok: true, id, portalUrl: `/portal/enter?key=${token}` }, { status: 201 });
+  res.cookies.set(SESSION_COOKIE, token, sessionCookie);
+  return res;
 }

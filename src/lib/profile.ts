@@ -1,0 +1,105 @@
+/**
+ * Student profile shape and validation. Shared by the builder
+ * (client) and the API route (server).
+ */
+import {
+  availabilityOptions,
+  builderTypeOptions,
+  environmentPairs,
+  profileLimits,
+  profileQuestions,
+} from "@/content/profile";
+
+export type EnvironmentChoice = "left" | "either" | "right";
+export type EnvironmentKey = (typeof environmentPairs)[number]["key"];
+
+export type StudentProfile = {
+  availability: string[];
+  roles: string[];
+  interests: string[];
+  builderTypes: string[];
+  skills: string[];
+  fascinations: string[];
+  environment: Partial<Record<EnvironmentKey, EnvironmentChoice>>;
+};
+
+export type ProfileField = keyof StudentProfile;
+export type ProfileErrors = Partial<Record<ProfileField, string>>;
+
+export const emptyProfile: StudentProfile = {
+  availability: [],
+  roles: [],
+  interests: [],
+  builderTypes: [],
+  skills: [],
+  fascinations: [],
+  environment: {},
+};
+
+export const profileFields = profileQuestions.map((q) => q.field as ProfileField);
+
+/** Fields that need an answer before the step counts as done. */
+const required: ProfileField[] = ["availability", "roles", "interests", "environment"];
+
+const CHOICES: EnvironmentChoice[] = ["left", "either", "right"];
+
+function strings(v: unknown, max: number, len = 40): string[] {
+  if (!Array.isArray(v)) return [];
+  const out: string[] = [];
+  for (const x of v) {
+    if (typeof x !== "string") continue;
+    const s = x.trim().slice(0, len);
+    if (s && !out.some((o) => o.toLowerCase() === s.toLowerCase())) out.push(s);
+    if (out.length >= max) break;
+  }
+  return out;
+}
+
+/** Coerce anything (stored JSON, request body) into a clean profile. */
+export function sanitizeProfile(input: unknown): StudentProfile {
+  const p = (input && typeof input === "object" ? input : {}) as Record<string, unknown>;
+  const env = (p.environment && typeof p.environment === "object" ? p.environment : {}) as Record<string, unknown>;
+  const environment: StudentProfile["environment"] = {};
+  for (const { key } of environmentPairs) {
+    const c = env[key];
+    if (typeof c === "string" && CHOICES.includes(c as EnvironmentChoice)) environment[key] = c as EnvironmentChoice;
+  }
+  return {
+    availability: strings(p.availability, 10).filter((a) => availabilityOptions.includes(a)),
+    roles: strings(p.roles, profileLimits.roles),
+    interests: strings(p.interests, profileLimits.interests),
+    builderTypes: strings(p.builderTypes, 3).filter((b) => builderTypeOptions.includes(b)),
+    skills: strings(p.skills, profileLimits.skills),
+    fascinations: strings(p.fascinations, profileLimits.fascinations, 30),
+    environment,
+  };
+}
+
+export function checkProfileField(field: ProfileField, p: StudentProfile): string | undefined {
+  switch (field) {
+    case "availability":
+      return p.availability.length ? undefined : "Pick at least one.";
+    case "roles":
+      return p.roles.length ? undefined : "Pick at least one.";
+    case "interests":
+      return p.interests.length ? undefined : "Pick at least one, or “Open to anything”.";
+    case "environment":
+      return environmentPairs.every(({ key }) => p.environment[key])
+        ? undefined
+        : "Answer each row. “Either” is a fine answer.";
+    default:
+      return undefined;
+  }
+}
+
+/** True once a question has been answered (optional ones count once touched). */
+export function isAnswered(field: ProfileField, p: StudentProfile) {
+  if (required.includes(field)) return !checkProfileField(field, p);
+  const v = p[field];
+  return Array.isArray(v) ? v.length > 0 : false;
+}
+
+export function profileProgress(p: StudentProfile) {
+  const done = required.filter((f) => isAnswered(f, p)).length;
+  return { done, total: required.length, complete: done === required.length };
+}
