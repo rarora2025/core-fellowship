@@ -3,12 +3,9 @@
 import * as React from "react";
 import Link from "next/link";
 import { motion, useMotionValueEvent, useScroll } from "framer-motion";
-import { ArrowUpRight } from "lucide-react";
 
-import { Button } from "@/components/ui/button";
 import { ThemeToggle } from "@/components/site/theme-toggle";
 import { easeOutSoft } from "@/components/motion/easing";
-import { applyLinks } from "@/content/site";
 import { cn } from "@/lib/utils";
 
 export function Navbar({ board = false }: { board?: boolean }) {
@@ -40,12 +37,6 @@ export function Navbar({ board = false }: { board?: boolean }) {
             </Link>
           )}
           <ThemeToggle />
-          <Button asChild size="sm" variant="cta">
-            <Link href={applyLinks.student.href}>
-              Apply
-              <ArrowUpRight className="transition-transform duration-300 group-hover/button:-translate-y-px group-hover/button:translate-x-px" />
-            </Link>
-          </Button>
         </div>
       </nav>
     </motion.header>

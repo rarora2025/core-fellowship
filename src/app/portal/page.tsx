@@ -117,7 +117,7 @@ export default async function PortalHome({
             </p>
           </div>
           <Button asChild variant={booking ? "outline" : "cta"} size="lg" className="h-11 shrink-0 rounded-xl px-5">
-            <Link href="/portal/interview">{booking ? "Change time" : "Book a time"}</Link>
+            <Link href={booking ? "/portal/interview?change=1" : "/portal/interview"}>{booking ? "Change time" : "Book a time"}</Link>
           </Button>
         </section>
       </div>

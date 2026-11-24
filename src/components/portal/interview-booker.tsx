@@ -38,11 +38,20 @@ function Place({ slot, className }: { slot: Slot; className?: string }) {
  * student; picking a new time moves the booking. Once booked, the
  * time sits on a card styled like the CORE logo tile.
  */
-export function InterviewBooker({ open, booked }: { open: Slot[]; booked: Slot | null }) {
+export function InterviewBooker({
+  open,
+  booked,
+  startPicking = false,
+}: {
+  open: Slot[];
+  booked: Slot | null;
+  /** Coming from "Change time": open straight on the times. */
+  startPicking?: boolean;
+}) {
   const router = useRouter();
   const reduce = !!useReducedMotion();
   const [mine, setMine] = React.useState<Slot | null>(booked);
-  const [picking, setPicking] = React.useState(!booked);
+  const [picking, setPicking] = React.useState(!booked || startPicking);
   const [selected, setSelected] = React.useState<string | null>(null);
   const [busy, setBusy] = React.useState<"book" | "cancel" | null>(null);
   const [confirmCancel, setConfirmCancel] = React.useState(false);
@@ -60,6 +69,13 @@ export function InterviewBooker({ open, booked }: { open: Slot[]; booked: Slot |
   const [dayKey, setDayKey] = React.useState<string | null>(null);
   const day = days.find(([k]) => k === dayKey) ?? days[0] ?? null;
   const choice = open.find((s) => s.id === selected) ?? null;
+
+  // From "Change time": bring the times into view under the current booking.
+  React.useEffect(() => {
+    if (!startPicking || !booked) return;
+    const t = window.setTimeout(() => document.getElementById("times")?.scrollIntoView({ behavior: "smooth", block: "start" }), 350);
+    return () => window.clearTimeout(t);
+  }, [startPicking, booked]);
 
   async function book() {
     if (!choice) return;
@@ -189,7 +205,8 @@ export function InterviewBooker({ open, booked }: { open: Slot[]; booked: Slot |
             animate={{ opacity: 1, y: 0 }}
             exit={{ opacity: 0, y: -8, transition: { duration: 0.2 } }}
             transition={{ duration: 0.7, ease: easeOutSoft }}
-            className={cn(portalCard, "mt-9 p-2")}
+            id="times"
+            className={cn(portalCard, "mt-9 scroll-mt-24 p-2")}
             aria-label="Available times"
           >
             {mine && <h2 className="px-3 pb-1 pt-3 text-[16px] font-medium tracking-[-0.01em]">Pick a new time</h2>}
