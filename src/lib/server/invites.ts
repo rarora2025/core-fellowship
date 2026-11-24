@@ -1,7 +1,7 @@
 import "server-only";
 
 import { siteConfig } from "@/content/site";
-import { formatSlot, interviewerOf, type Slot } from "@/lib/interviews";
+import { formatSlot, interviewerOf, placeOf, type Slot } from "@/lib/interviews";
 import { sendEmails, type Mail } from "@/lib/server/email";
 
 /**
@@ -32,7 +32,7 @@ export function inviteIcs(student: Attendee, slot: Slot, method: "REQUEST" | "CA
     `DTSTART:${stamp(slot.start)}`,
     `DTEND:${stamp(slot.end)}`,
     `SUMMARY:${esc(`${siteConfig.name}: ${student.name || student.email} and ${host.name}`)}`,
-    `DESCRIPTION:${esc("A 20-minute conversation with CORE. Nothing to prepare.")}`,
+    `DESCRIPTION:${esc(`A 20-minute conversation with CORE. No case, no test.${placeOf(slot).url ? `\nJoin: ${placeOf(slot).url}` : ""}`)}`,
     `LOCATION:${esc(slot.location)}`,
     ...(host.email ? [`ORGANIZER;CN=${esc(host.name)}:mailto:${host.email}`] : []),
     ...attendees.map((a) => `ATTENDEE;ROLE=REQ-PARTICIPANT;PARTSTAT=NEEDS-ACTION;RSVP=TRUE:mailto:${a}`),
@@ -54,7 +54,8 @@ function mails(student: Attendee, slot: Slot, method: "REQUEST" | "CANCEL", to: 
     const text =
       method === "CANCEL"
         ? `Your ${siteConfig.name} conversation with ${who} on ${when} is off. It's been taken off your calendar.`
-        : `${siteConfig.name} conversation with ${who}\n${when}\nWhere: ${slot.location}\n\n` +
+        : `${siteConfig.name} conversation with ${who}\n${when}\n` +
+          (placeOf(slot).url ? `Google Meet: ${placeOf(slot).url}\n\n` : `Where: ${slot.location}\n\n`) +
           `The invite is attached, and Google Calendar adds it automatically.` +
           (forStudent && student.token
             ? `\n\nTo change or cancel, use your private link (keep it to yourself):\n${siteConfig.url}/portal/enter?key=${student.token}`

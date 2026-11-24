@@ -29,15 +29,16 @@ export type InterviewWindow = {
   /** HH:MM, 24-hour */
   start: string;
   end: string;
+  /** A room for in person, or a Google Meet link (https://meet.google.com/…) for online. */
   location: string;
   interviewer: InterviewerKey;
 };
 
 export const interviewWindows: InterviewWindow[] = [
   { date: "2026-12-01", start: "14:00", end: "16:00", location: "Lerner Hall", interviewer: "dev" },
-  { date: "2026-12-02", start: "18:00", end: "20:00", location: "Zoom", interviewer: "rahul" },
+  { date: "2026-12-02", start: "18:00", end: "20:00", location: "Lerner Hall", interviewer: "rahul" },
   { date: "2026-12-03", start: "11:00", end: "13:00", location: "Lerner Hall", interviewer: "dev" },
-  { date: "2026-12-04", start: "15:00", end: "17:00", location: "Zoom", interviewer: "rahul" },
+  { date: "2026-12-04", start: "15:00", end: "17:00", location: "Lerner Hall", interviewer: "rahul" },
   { date: "2026-12-07", start: "17:00", end: "19:00", location: "Lerner Hall", interviewer: "dev" },
 ];
 
@@ -45,6 +46,7 @@ export const interviewCopy = {
   length: "20 minutes",
   expect: [
     "Twenty minutes with someone from CORE. No case, no test.",
+    "We use this conversation to introduce you to startups.",
     "We'll talk about what you're good at, what you're into, and how you like to work.",
     "Nothing to prepare. The first thing that comes to mind is usually the right one.",
   ],

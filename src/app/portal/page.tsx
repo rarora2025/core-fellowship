@@ -6,7 +6,7 @@ import { CopyLink } from "@/components/portal/copy-link";
 import { portalCard, portalTitle } from "@/components/portal/ui";
 import { applyLinks } from "@/content/site";
 import { profileQuestions } from "@/content/profile";
-import { formatSlot } from "@/lib/interviews";
+import { formatSlot, placeOf } from "@/lib/interviews";
 import { isAnswered, profileProgress, type ProfileField } from "@/lib/profile";
 import { bookingFor, currentStudent, readProfile } from "@/lib/server/portal";
 import { cn } from "@/lib/utils";
@@ -109,10 +109,10 @@ export default async function PortalHome({
               {booking ? (
                 <>
                   <span className="text-foreground">{formatSlot(booking)}</span>
-                  <span className="block">{booking.location}</span>
+                  <span className="block">{placeOf(booking).label}</span>
                 </>
               ) : (
-                "Twenty minutes with someone from CORE. Nothing to prepare."
+                "Twenty minutes with someone from CORE. No case, no test."
               )}
             </p>
           </div>

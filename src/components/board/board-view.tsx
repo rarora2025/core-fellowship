@@ -9,7 +9,7 @@ import { Input } from "@/components/ui/input";
 import { easeOutSoft } from "@/components/motion/easing";
 import { portalCard, portalTitle } from "@/components/portal/ui";
 import { environmentPairs } from "@/content/profile";
-import { formatShortDay, formatTime } from "@/lib/interviews";
+import { formatShortDay, formatTime, placeOf } from "@/lib/interviews";
 import type { Applicant } from "@/lib/server/board";
 import { cn } from "@/lib/utils";
 
@@ -186,7 +186,7 @@ function Person({ a, onClose }: { a: Applicant; onClose: () => void }) {
             <>
               <span className="font-medium">{when(a)}</span>
               <span className={cn(quiet, "block")}>
-                with {a.booking.interviewerName} · {a.booking.location}
+                with {a.booking.interviewerName} · {placeOf(a.booking).label}
               </span>
             </>
           ) : (

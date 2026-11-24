@@ -11,7 +11,7 @@ import { cn } from "@/lib/utils";
 /**
  * Four this-or-that rows, each a three-way segmented control
  * (left / either / right), styled like the homepage's
- * student/startup switch.
+ * old audience switch.
  */
 export function EnvironmentPicker({
   value,

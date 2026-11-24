@@ -60,6 +60,12 @@ export function allSlots(): Slot[] {
   return interviewWindows.flatMap(slotsFor).sort((a, b) => a.start.localeCompare(b.start));
 }
 
+/** Where a time happens: a room, or a Google Meet link shown as "Google Meet". */
+export function placeOf(slot: Pick<Slot, "location">) {
+  const online = /^https?:\/\//i.test(slot.location);
+  return { label: online ? "Google Meet" : slot.location, url: online ? slot.location : null };
+}
+
 export function interviewerOf(slot: Slot) {
   return interviewers[slot.interviewer];
 }
@@ -77,6 +83,20 @@ const tz = { timeZone: interviewConfig.timeZone };
 
 export function formatDay(iso: string) {
   return new Date(iso).toLocaleDateString("en-US", { ...tz, weekday: "long", month: "long", day: "numeric" });
+}
+
+/** The pieces of a day tile: { weekday: "Tue", day: "1", month: "Dec" }. */
+export function dayParts(iso: string) {
+  const d = new Date(iso);
+  const part = (o: Intl.DateTimeFormatOptions) => d.toLocaleDateString("en-US", { ...tz, ...o });
+  return { weekday: part({ weekday: "short" }), day: part({ day: "numeric" }), month: part({ month: "short" }) };
+}
+
+/** "6:00 – 6:20 PM ET" */
+export function formatRange(s: Pick<Slot, "start" | "end">) {
+  const a = formatTime(s.start);
+  const b = formatTime(s.end);
+  return `${a.slice(-2) === b.slice(-2) ? a.slice(0, -3) : a} – ${b} ET`;
 }
 
 /** "Wed, Dec 2" */

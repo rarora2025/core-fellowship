@@ -3,7 +3,7 @@
 import * as React from "react";
 import Link from "next/link";
 import { AnimatePresence, motion, useReducedMotion, type Variants } from "framer-motion";
-import { ArrowLeft, ArrowRight, Check, Loader2, Plus, X } from "lucide-react";
+import { ArrowLeft, ArrowRight, Loader2, Plus, X } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -11,6 +11,7 @@ import { ResumeUpload } from "@/components/apply/resume-upload";
 import { LinkedInFinder } from "@/components/apply/linkedin-finder";
 import { MajorPicker, resolveMajor } from "@/components/apply/text-pickers";
 import { WheelPicker } from "@/components/apply/wheel-picker";
+import { CoreBulb } from "@/components/brand/core-bulb";
 import { ProfileInput, profileFieldIsWide, profileFieldSkippable } from "@/components/portal/profile-inputs";
 import { easeOutSoft } from "@/components/motion/easing";
 import {
@@ -258,14 +259,9 @@ export function StudentApplicationForm({ initialEmail = "" }: { initialEmail?: s
         transition={{ duration: 1.2, ease: easeOutSoft }}
         className="flex flex-col items-center text-center"
       >
-        <motion.span
-          initial={{ scale: reduce ? 1 : 0.6, opacity: 0 }}
-          animate={{ scale: 1, opacity: 1 }}
-          transition={{ duration: 0.9, ease: easeOutSoft, delay: 0.2 }}
-          className="mb-7 grid size-14 place-items-center rounded-full bg-cta text-cta-foreground"
-        >
-          <Check className="size-6" strokeWidth={2.5} aria-hidden="true" />
-        </motion.span>
+        <span className="mb-7 grid size-16 place-items-center rounded-[20px] bg-cta text-white shadow-[0_16px_32px_-16px_rgb(var(--shadow-color)/0.5)]">
+          <CoreBulb lightUp delay={0.4} className="h-9 w-auto" />
+        </span>
         <h1 className="font-display text-[clamp(2rem,1.5rem+1.8vw,2.8rem)] font-bold leading-[1.1] tracking-[-0.03em]">
           {profileOutro.title}
         </h1>
