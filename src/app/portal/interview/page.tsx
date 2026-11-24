@@ -13,8 +13,8 @@ export default async function InterviewPage({ searchParams }: { searchParams: Pr
   if (!me) redirect("/portal");
   const slots = await loadSlots();
   const [taken, booked, { change }] = await Promise.all([takenSlotIds(), bookingFor(me.id, slots), searchParams]);
-  // When two interviewers are free at the same time, show that time once:
-  // the student picks a time, not a person.
+  // If the same time is ever offered twice, show it once:
+  // the student picks a time.
   const seen = new Set<string>();
   const open = slots.filter((s) => {
     if (!isOpen(s) || taken.includes(s.id) || seen.has(s.start)) return false;

@@ -1,9 +1,9 @@
 -- CORE Fellowship: interview times live in the database, set on the
--- board's Schedule tab. Run once (after schema.sql). Safe to run again.
+-- board's Schedule tab. One shared set ('core'): Dev and Rahul are on every interview. Run once (after schema.sql). Safe to run again.
 
 create table if not exists public.interview_windows (
   id uuid primary key default gen_random_uuid(),
-  interviewer text not null check (interviewer in ('dev', 'rahul')),
+  interviewer text not null default 'core' check (interviewer = 'core'),
   starts_at timestamptz not null,
   ends_at timestamptz not null,
   location text not null default 'Lerner Hall',
@@ -42,10 +42,10 @@ grant execute on function public.replace_windows(text, timestamptz, timestamptz,
 -- there are none yet. Change them on the board.
 insert into public.interview_windows (interviewer, starts_at, ends_at, location)
 select * from (values
-  ('dev',   timestamptz '2026-12-01 14:00 America/New_York', timestamptz '2026-12-01 16:00 America/New_York', 'Lerner Hall'),
-  ('rahul', timestamptz '2026-12-02 18:00 America/New_York', timestamptz '2026-12-02 20:00 America/New_York', 'Lerner Hall'),
-  ('dev',   timestamptz '2026-12-03 11:00 America/New_York', timestamptz '2026-12-03 13:00 America/New_York', 'Lerner Hall'),
-  ('rahul', timestamptz '2026-12-04 15:00 America/New_York', timestamptz '2026-12-04 17:00 America/New_York', 'Lerner Hall'),
-  ('dev',   timestamptz '2026-12-07 17:00 America/New_York', timestamptz '2026-12-07 19:00 America/New_York', 'Lerner Hall')
+  ('core',  timestamptz '2026-12-01 14:00 America/New_York', timestamptz '2026-12-01 16:00 America/New_York', 'Lerner Hall'),
+  ('core',  timestamptz '2026-12-02 18:00 America/New_York', timestamptz '2026-12-02 20:00 America/New_York', 'Lerner Hall'),
+  ('core',  timestamptz '2026-12-03 11:00 America/New_York', timestamptz '2026-12-03 13:00 America/New_York', 'Lerner Hall'),
+  ('core',  timestamptz '2026-12-04 15:00 America/New_York', timestamptz '2026-12-04 17:00 America/New_York', 'Lerner Hall'),
+  ('core',  timestamptz '2026-12-07 17:00 America/New_York', timestamptz '2026-12-07 19:00 America/New_York', 'Lerner Hall')
 ) as v(interviewer, starts_at, ends_at, location)
 where not exists (select 1 from public.interview_windows);

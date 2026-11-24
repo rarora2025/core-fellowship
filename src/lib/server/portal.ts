@@ -104,7 +104,7 @@ export class BookingError extends Error {}
 /**
  * Book (or move) this student's interview. One booking per student.
  * The database refuses a time someone else holds; then the student and
- * the interviewer get a calendar invite (and a move updates it).
+ * the CORE team get a calendar invite (and a move updates it).
  */
 export async function bookSlot(me: PortalStudent, slotId: string) {
   const id = me.id;

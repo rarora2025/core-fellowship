@@ -40,7 +40,6 @@ type SortKey = keyof typeof SORTS;
 const GROUPS = {
   none: "No grouping",
   status: "Interview",
-  interviewer: "Interviewer",
   roles: "Wants to do",
   interests: "Spaces",
   year: "Grad year",
@@ -70,8 +69,6 @@ function groupsOf(a: Applicant, key: GroupKey, now: number): string[] {
       return ["Everyone"];
     case "status":
       return [statusOf(a, now)];
-    case "interviewer":
-      return [a.booking?.interviewerName ?? "No interviewer yet"];
     case "roles":
       return or(p.roles, "No answer");
     case "interests":
@@ -251,7 +248,7 @@ function Person({ a, onClose }: { a: Applicant; onClose: () => void }) {
                     {formatDay(a.booking.start)}, {formatRange(a.booking)}
                   </p>
                   <p className="text-white/80">
-                    with {a.booking.interviewerName} · {placeOf(a.booking).label}
+                    {placeOf(a.booking).label}
                   </p>
                 </div>
               </>
@@ -347,18 +344,15 @@ type StatKey = "all" | Status;
 /** Everyone who applied: numbers, who's next, then the table to search, sort and pool. */
 export function BoardView({
   applicants,
-  interviewers,
   canSignOut = true,
 }: {
   applicants: Applicant[];
-  interviewers: string[];
   /** Off on localhost, where the board is always open. */
   canSignOut?: boolean;
 }) {
   const router = useRouter();
   const reduce = !!useReducedMotion();
   const [q, setQ] = React.useState("");
-  const [who, setWho] = React.useState<string>("Everyone");
   const [stat, setStat] = React.useState<StatKey>("all");
   const [sort, setSort] = React.useState<SortKey>("newest");
   const [group, setGroup] = React.useState<GroupKey>("none");
@@ -388,17 +382,16 @@ export function BoardView({
   const upcoming = React.useMemo(
     () =>
       applicants
-        .filter((a) => statusOf(a, now) === "Coming up" && (who === "Everyone" || a.booking?.interviewerName === who))
+        .filter((a) => statusOf(a, now) === "Coming up")
         .sort((a, b) => a.booking!.start.localeCompare(b.booking!.start))
         .slice(0, 8),
-    [applicants, now, who]
+    [applicants, now]
   );
 
   const shown = React.useMemo(() => {
     const text = q.trim().toLowerCase();
     return applicants
       .filter((a) => {
-        if (who !== "Everyone" && a.booking?.interviewerName !== who) return false;
         if (stat !== "all" && statusOf(a, now) !== stat) return false;
         if (!text) return true;
         const p = a.profile;
@@ -408,7 +401,7 @@ export function BoardView({
           .includes(text);
       })
       .sort(compare(sort));
-  }, [applicants, q, who, stat, sort, now]);
+  }, [applicants, q, stat, sort, now]);
 
   const pools = React.useMemo(() => {
     const map = new Map<string, Applicant[]>();
@@ -484,7 +477,7 @@ export function BoardView({
       {upcoming.length > 0 && (
         <section aria-labelledby="next" className="mt-10">
           <h2 id="next" className="text-[16px] font-medium tracking-[-0.01em]">
-            Next up{who !== "Everyone" ? ` with ${who}` : ""}
+            Next up
           </h2>
           <ol className="mt-3 flex gap-2.5 overflow-x-auto pb-2 [scrollbar-width:thin]">
             {upcoming.map((a) => (
@@ -498,7 +491,7 @@ export function BoardView({
                   <span className="min-w-0">
                     <span className="block truncate text-[15px] font-medium">{a.name}</span>
                     <span className="block truncate text-[13px] text-muted-foreground">
-                      {formatTime(a.booking!.start)} · {a.booking!.interviewerName} · {placeOf(a.booking!).label}
+                      {formatTime(a.booking!.start)} · {placeOf(a.booking!).label}
                     </span>
                   </span>
                 </button>
@@ -523,25 +516,6 @@ export function BoardView({
         <div className="grid grid-cols-2 gap-2.5 sm:flex sm:flex-wrap">
           <Picker label="Group by" value={group} options={GROUPS} onChange={setGroup} />
           <Picker label="Sort" value={sort} options={SORTS} onChange={setSort} />
-          <div role="radiogroup" aria-label="Interviewer" className="col-span-2 flex rounded-xl bg-muted p-1 sm:col-span-1">
-            {["Everyone", ...interviewers].map((name) => (
-              <button
-                key={name}
-                type="button"
-                role="radio"
-                aria-checked={who === name}
-                onClick={() => setWho(name)}
-                className={cn(
-                  "h-9 flex-1 rounded-lg px-3 text-[14px] transition-colors",
-                  who === name
-                    ? "bg-card font-medium text-foreground shadow-[0_1px_2px_rgb(var(--shadow-color)/0.12)] dark:bg-secondary"
-                    : "text-muted-foreground hover:text-foreground"
-                )}
-              >
-                {name}
-              </button>
-            ))}
-          </div>
         </div>
       </div>
 
@@ -612,7 +586,7 @@ export function BoardView({
                             >
                               {formatShortDay(a.booking.start)} · {formatTime(a.booking.start)}
                             </span>
-                            <span className={cn(quiet, "mt-0.5 block")}>{a.booking.interviewerName}</span>
+                            <span className={cn(quiet, "mt-0.5 block")}>{placeOf(a.booking).label}</span>
                           </span>
                         ) : (
                           <span className={quiet}>Not booked</span>

@@ -15,15 +15,16 @@ real Supabase project. What's left needs the domain.
   holds. Each time belongs to one interviewer; if two are free at once the
   student sees the time once.
 - **Calendar invites**, built like LionApps': booking emails the student and
-  that time's interviewer a real invite (Gmail adds it to the calendar);
+  both of you a real invite (Gmail adds it to the calendar);
   a move updates the same event, a cancel removes it. The student's email
   carries their private link so they can always get back in.
 - **Portal** (`/portal`): their booked time as a ticket card, their profile
   tags, and edit, move or cancel.
-- **Schedule** (`/board/schedule`): a week calendar of both interviewers'
-  free times and booked conversations. Pick Dev or Rahul, press Edit, drag
-  over the times you're free (in person or a Google Meet link) and save;
-  students can book them straight away. Booked and past times are locked.
+- **Schedule** (`/board/schedule`): one shared calendar of CORE's
+  interview times and booked conversations (Dev and Rahul are on every
+  interview and both get every invite). Press Edit times, drag over the
+  times you're free (in person or a Google Meet link) and save; students can
+  book them straight away. Booked and past times are locked.
 - **Board** (`/board`, one shared password): everyone who applied as a
   table. Search, sort, group into pools (by role, space, year, where, work
   authorization, interview status or interviewer), filter to one
@@ -32,8 +33,8 @@ real Supabase project. What's left needs the domain.
   the top bar; on the board, "Student view" goes back. On localhost
   (`npm run dev`, opened as localhost) the board is always open with no
   password, so the switch is always there while you build.
-- **Supabase** project `core-fellowship`: `supabase/schema.sql` and
-  `supabase/availability.sql` are applied.
+- **Supabase** project `core-fellowship`: `supabase/schema.sql`,
+  `supabase/availability.sql` and `supabase/shared-times.sql` are applied.
   Resumes are in a private bucket. Nothing is readable without the server
   key. `applicant_overview` in the Table Editor is one row per applicant.
 

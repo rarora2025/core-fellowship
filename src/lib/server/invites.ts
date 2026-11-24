@@ -6,7 +6,7 @@ import { sendEmails, type Mail } from "@/lib/server/email";
 
 /**
  * Calendar invites for interviews, built like LionApps': when a student
- * books, moves or cancels, they and the interviewer on that time get an
+ * books, moves or cancels, they and everyone on the CORE team get an
  * email with an invite. One event per student (same UID), so a move
  * updates the event already on their calendar instead of adding another.
  */
@@ -31,10 +31,10 @@ export function inviteIcs(student: Attendee, slot: Slot, method: "REQUEST" | "CA
     `DTSTAMP:${stamp(new Date().toISOString())}`,
     `DTSTART:${stamp(slot.start)}`,
     `DTEND:${stamp(slot.end)}`,
-    `SUMMARY:${esc(`${siteConfig.name}: ${student.name || student.email} and ${host.name}`)}`,
+    `SUMMARY:${esc(`${siteConfig.name}: conversation with ${student.name || student.email}`)}`,
     `DESCRIPTION:${esc(`A 20-minute conversation with CORE. No case, no test.${placeOf(slot).url ? `\nJoin: ${placeOf(slot).url}` : ""}`)}`,
     `LOCATION:${esc(slot.location)}`,
-    ...(host.email ? [`ORGANIZER;CN=${esc(host.name)}:mailto:${host.email}`] : []),
+    ...(host.emails[0] ? [`ORGANIZER;CN=${esc(siteConfig.name)}:mailto:${host.emails[0]}`] : []),
     ...attendees.map((a) => `ATTENDEE;ROLE=REQ-PARTICIPANT;PARTSTAT=NEEDS-ACTION;RSVP=TRUE:mailto:${a}`),
     `STATUS:${method === "CANCEL" ? "CANCELLED" : "CONFIRMED"}`,
     "END:VEVENT",
@@ -45,12 +45,12 @@ export function inviteIcs(student: Attendee, slot: Slot, method: "REQUEST" | "CA
 
 function mails(student: Attendee, slot: Slot, method: "REQUEST" | "CANCEL", to: string[]): Mail[] {
   const host = interviewerOf(slot);
-  const everyone = [student.email, host.email].filter(Boolean);
+  const everyone = [student.email, ...host.emails].filter(Boolean);
   const file = inviteIcs(student, slot, method, everyone);
   const when = formatSlot(slot);
   return to.filter(Boolean).map((addr) => {
     const forStudent = addr.toLowerCase() === student.email.toLowerCase();
-    const who = forStudent ? host.name : student.name || student.email;
+    const who = forStudent ? "CORE" : student.name || student.email;
     const text =
       method === "CANCEL"
         ? `Your ${siteConfig.name} conversation with ${who} on ${when} is off. It's been taken off your calendar.`
@@ -71,18 +71,12 @@ function mails(student: Attendee, slot: Slot, method: "REQUEST" | "CANCEL", to: 
 
 /**
  * Tell everyone about a change. `before` is the time they held (if any),
- * `after` the time they hold now (if any). The student always hears;
- * an interviewer who's no longer on it gets a cancellation.
+ * `after` the time they hold now (if any). The student and the whole
+ * team hear about it; a move updates the event already on calendars.
  */
 export async function sendBookingInvites(student: Attendee, before: Slot | null, after: Slot | null) {
-  const out: Mail[] = [];
-  if (after) {
-    out.push(...mails(student, after, "REQUEST", [student.email, interviewerOf(after).email]));
-    if (before && before.interviewer !== after.interviewer) {
-      out.push(...mails(student, before, "CANCEL", [interviewerOf(before).email]));
-    }
-  } else if (before) {
-    out.push(...mails(student, before, "CANCEL", [student.email, interviewerOf(before).email]));
-  }
-  return sendEmails(out);
+  const slot = after ?? before;
+  if (!slot) return { sent: 0, skipped: true, error: "" };
+  const to = [student.email, ...interviewerOf(slot).emails];
+  return sendEmails(mails(student, slot, after ? "REQUEST" : "CANCEL", to));
 }

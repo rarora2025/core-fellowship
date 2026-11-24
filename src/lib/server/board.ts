@@ -3,8 +3,7 @@ import "server-only";
 import { createHash, timingSafeEqual } from "node:crypto";
 import { cookies, headers } from "next/headers";
 
-import { interviewers } from "@/content/interviews";
-import { findIn, interviewerOf, slotsFrom, type Slot } from "@/lib/interviews";
+import { findIn, slotsFrom, type Slot } from "@/lib/interviews";
 import { sanitizeProfile, type StudentProfile } from "@/lib/profile";
 import { store } from "@/lib/server/store";
 
@@ -79,7 +78,7 @@ export type Applicant = {
   resumeId: string | null;
   referrals: { name: string; email: string }[];
   profile: StudentProfile;
-  booking: (Slot & { interviewerName: string }) | null;
+  booking: Slot | null;
 };
 
 const str = (v: unknown) => (typeof v === "string" ? v : Array.isArray(v) ? v.filter((x) => typeof x === "string").join(", ") : "");
@@ -105,9 +104,8 @@ export async function loadApplicants(): Promise<Applicant[]> {
       resumeId: typeof resume?.id === "string" ? resume.id : null,
       referrals: referrals.map((r) => ({ name: str(r.name), email: str(r.email) })).filter((r) => r.name || r.email),
       profile: sanitizeProfile(profiles[id]),
-      booking: slot ? { ...slot, interviewerName: interviewerOf(slot).name } : null,
+      booking: slot,
     };
   });
 }
 
-export const interviewerNames = Object.values(interviewers).map((i) => i.name);

@@ -46,21 +46,9 @@ export type WeekBooking = {
   location: string;
 };
 
-/** Each interviewer's colours: solid for booked, a tint for free. Written out so Tailwind sees them. */
-const TONES: Record<
-  InterviewerKey,
-  { solid: string; tint: string; dot: string }
-> = {
-  dev: {
-    solid: "bg-cta text-white",
-    tint: "bg-cta/20 dark:bg-cta/25",
-    dot: "bg-cta",
-  },
-  rahul: {
-    solid: "bg-[#2457a6] text-white dark:bg-[#3d74cf]",
-    tint: "bg-[#2457a6]/15 dark:bg-[#3d74cf]/30",
-    dot: "bg-[#2457a6] dark:bg-[#3d74cf]",
-  },
+/** Solid for booked, a tint for free. Written out so Tailwind sees them. */
+const TONES: Record<InterviewerKey, { solid: string; tint: string }> = {
+  core: { solid: "bg-cta text-white", tint: "bg-cta/20 dark:bg-cta/25" },
 };
 
 const pill =
@@ -76,7 +64,7 @@ const label = (date: string, o: Intl.DateTimeFormatOptions) =>
 /**
  * The board's Schedule tab: one week as a calendar. Free times are a
  * tint, booked conversations are solid with the student's name. Pick
- * Dev or Rahul and press "Edit times" to drag over the grid, when2meet
+ * "Edit times" and drag over the grid, when2meet
  * style, and save: students can book those times straight away.
  */
 export function ScheduleView({
@@ -96,7 +84,6 @@ export function ScheduleView({
   const router = useRouter();
   const reduce = !!useReducedMotion();
   const [now] = React.useState(() => Date.now());
-  const [who, setWho] = React.useState<InterviewerKey | "both">("both");
   const [editing, setEditing] = React.useState<InterviewerKey | null>(null);
   const [draft, setDraft] = React.useState<Map<string, string>>(new Map());
   const [placeMode, setPlaceMode] = React.useState<"room" | "meet">("room");
@@ -118,8 +105,6 @@ export function ScheduleView({
   );
   const columns = React.useMemo(() => days.map((d) => dayCells(d)), [days]);
   const rows = columns[0]?.length ?? 0;
-  const nameOf = (k: InterviewerKey) =>
-    interviewers.find((i) => i.key === k)?.name ?? k;
 
   // What's free and what's booked, by "interviewer|start".
   const free = React.useMemo(() => {
@@ -135,11 +120,7 @@ export function ScheduleView({
     return m;
   }, [bookings]);
 
-  const visible: InterviewerKey[] = editing
-    ? [editing]
-    : who === "both"
-      ? interviewers.map((i) => i.key)
-      : [who];
+  const visible: InterviewerKey[] = interviewers.map((i) => i.key);
   const place =
     placeMode === "meet"
       ? meet.trim()
@@ -215,7 +196,7 @@ export function ScheduleView({
     if (!res?.ok)
       return setError(body?.error ?? "That didn't save. Try again.");
     setSaved(
-      `Saved. ${body.open} open ${body.open === 1 ? "time" : "times"} for ${nameOf(editing)} this week, bookable now.`,
+      `Saved. ${body.open} open ${body.open === 1 ? "time" : "times"} this week, bookable now.`,
     );
     setEditing(null);
     router.refresh();
@@ -255,7 +236,7 @@ export function ScheduleView({
         </div>
       </div>
 
-      {/* Week and who */}
+      {/* Week, and Edit */}
       <div className="mt-8 flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
         <div className="flex items-center gap-2">
           <Link
@@ -287,51 +268,10 @@ export function ScheduleView({
         </div>
 
         {!editing && (
-          <div className="flex flex-wrap items-center gap-2.5">
-            <div
-              role="radiogroup"
-              aria-label="Whose schedule"
-              className="flex rounded-xl bg-muted p-1"
-            >
-              {[{ key: "both" as const, name: "Both" }, ...interviewers].map(
-                (i) => (
-                  <button
-                    key={i.key}
-                    type="button"
-                    role="radio"
-                    aria-checked={who === i.key}
-                    onClick={() => setWho(i.key)}
-                    className={cn(
-                      "inline-flex h-9 items-center gap-1.5 rounded-lg px-3.5 text-[14px] transition-colors",
-                      who === i.key
-                        ? "bg-card font-medium text-foreground shadow-[0_1px_2px_rgb(var(--shadow-color)/0.12)] dark:bg-secondary"
-                        : "text-muted-foreground hover:text-foreground",
-                    )}
-                  >
-                    {i.key !== "both" && (
-                      <span
-                        className={cn("size-2 rounded-full", TONES[i.key].dot)}
-                        aria-hidden="true"
-                      />
-                    )}
-                    {i.name}
-                  </button>
-                ),
-              )}
-            </div>
-            {who === "both" ? (
-              <span className={quiet}>Pick a name to edit their times.</span>
-            ) : (
-              <Button
-                variant="cta"
-                className="h-10 rounded-full px-4"
-                onClick={() => startEditing(who)}
-              >
-                <Pencil className="size-4" />
-                Edit {nameOf(who)}&apos;s times
-              </Button>
-            )}
-          </div>
+          <Button variant="cta" className="h-10 self-start rounded-full px-4" onClick={() => startEditing(visible[0])}>
+            <Pencil className="size-4" />
+            Edit times
+          </Button>
         )}
       </div>
 
@@ -339,7 +279,7 @@ export function ScheduleView({
         {editing ? (
           <>
             <span className="font-medium text-foreground">
-              Drag over the times {nameOf(editing)} is free.
+              Drag over the times you&apos;re free.
             </span>{" "}
             Drag again to take them off. Booked and past times are locked.
           </>
@@ -489,7 +429,7 @@ export function ScheduleView({
                               return (
                                 <span
                                   key={k}
-                                  title={`${b.name} · ${formatRange(b)} · ${nameOf(k)}`}
+                                  title={`${b.name} · ${formatRange(b)}`}
                                   className={cn(
                                     "flex min-w-0 flex-1 items-center rounded-[5px] px-1.5 text-[11px] font-medium",
                                     TONES[k].solid,
@@ -532,28 +472,12 @@ export function ScheduleView({
 
       {/* Key */}
       <div className="mt-3 flex flex-wrap items-center gap-x-5 gap-y-2 px-1">
-        {visible.map((k) => (
-          <span
-            key={k}
-            className="flex items-center gap-3 text-[13px] text-muted-foreground"
-          >
-            <span className="font-medium text-foreground">{nameOf(k)}</span>
-            <span className="flex items-center gap-1.5">
-              <span
-                className={cn("h-3 w-5 rounded-[4px]", TONES[k].tint)}
-                aria-hidden="true"
-              />{" "}
-              free
-            </span>
-            <span className="flex items-center gap-1.5">
-              <span
-                className={cn("h-3 w-5 rounded-[4px]", TONES[k].solid)}
-                aria-hidden="true"
-              />{" "}
-              booked
-            </span>
-          </span>
-        ))}
+        <span className="flex items-center gap-1.5 text-[13px] text-muted-foreground">
+          <span className={cn("h-3 w-5 rounded-[4px]", TONES.core.tint)} aria-hidden="true" /> Free
+        </span>
+        <span className="flex items-center gap-1.5 text-[13px] text-muted-foreground">
+          <span className={cn("h-3 w-5 rounded-[4px]", TONES.core.solid)} aria-hidden="true" /> Booked
+        </span>
         <span className="flex items-center gap-1.5 text-[13px] text-muted-foreground">
           <Video className="size-3" aria-hidden="true" /> Google Meet
         </span>
@@ -603,16 +527,6 @@ export function ScheduleView({
                           {placeOf(b).label}
                         </span>
                       </span>
-                    </span>
-                    <span className="flex items-center gap-1.5 text-[13px] text-muted-foreground">
-                      <span
-                        className={cn(
-                          "size-2 rounded-full",
-                          TONES[b.interviewer].dot,
-                        )}
-                        aria-hidden="true"
-                      />
-                      {nameOf(b.interviewer)}
                     </span>
                   </li>
                 );
@@ -710,7 +624,7 @@ export function ScheduleView({
                   disabled={saving}
                 >
                   {saving ? <Loader2 className="animate-spin" /> : null}
-                  Save {nameOf(editing)}&apos;s week
+                  Save this week
                 </Button>
               </div>
             </div>

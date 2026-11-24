@@ -15,13 +15,18 @@ export const interviewConfig = {
   defaultRoom: "Lerner Hall",
 };
 
+/** Who runs the interviews. Both are on every one and get every invite. */
+export const team = [
+  { name: "Dev", email: "dg3592@columbia.edu" },
+  { name: "Rahul", email: "ra3206@columbia.edu" },
+] as const;
+
 /**
- * Who interviews. Each free block names one of them; their email
- * gets the calendar invite along with the student's.
+ * One shared set of CORE interview times ("core"). Kept as a key so a
+ * second calendar could be added later without changing the database.
  */
 export const interviewers = {
-  dev: { name: "Dev", email: "dg3592@columbia.edu" },
-  rahul: { name: "Rahul", email: "ra3206@columbia.edu" },
+  core: { name: "CORE", emails: team.map((t) => t.email) },
 } as const;
 
 export type InterviewerKey = keyof typeof interviewers;
