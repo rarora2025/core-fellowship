@@ -79,6 +79,12 @@ const supabase = {
     });
     return rows[0].id as string;
   },
+  async applicationIdForEmail(email: string) {
+    // Case-insensitive exact match: escape the characters ilike treats as wildcards.
+    const exact = email.replace(/[\\_%]/g, (c) => `\\${c}`);
+    const rows = await sb(`/rest/v1/applications?email=ilike.${q(exact)}&select=id&order=received_at.asc&limit=1`);
+    return (rows?.[0]?.id as string) ?? null;
+  },
   async getApplication(id: string): Promise<StoredApplication | null> {
     const rows = await sb(`/rest/v1/applications?id=eq.${q(id)}&select=id,received_at,data`);
     const r = rows?.[0];
@@ -215,6 +221,11 @@ const files = {
     await writeJson(path.join(STUDENTS, `${id}.json`), { id, receivedAt: new Date().toISOString(), application });
     return id;
   },
+  async applicationIdForEmail(email: string) {
+    const all = await files.allApplications();
+    const match = all.reverse().find((a) => String(a.application.email ?? "").toLowerCase() === email.toLowerCase());
+    return match?.id ?? null;
+  },
   async getApplication(id: string): Promise<StoredApplication | null> {
     return readJson<StoredApplication | null>(path.join(STUDENTS, `${id}.json`), null);
   },
@@ -304,6 +315,11 @@ export const store = {
   resumeExists: (id: string) => (ID.test(id) ? backend.resumeExists(id) : Promise.resolve(false)),
   saveApplication: (a: Record<string, unknown>) => backend.saveApplication(a),
   getApplication: (id: string) => (ID.test(id) ? backend.getApplication(id) : Promise.resolve(null)),
+  /** An application already sent from this email, if any (case doesn't matter). */
+  applicationIdForEmail: (email: string) => {
+    const e = email.trim().toLowerCase();
+    return /^[^\s@*,()]+@[^\s@*,()]+$/.test(e) ? backend.applicationIdForEmail(e) : Promise.resolve(null);
+  },
   createToken: (token: string, applicationId: string) => backend.createToken(token, applicationId),
   applicationIdForToken: (token: string) => backend.applicationIdForToken(token),
   /** The student's private link token, to send them back in. */
