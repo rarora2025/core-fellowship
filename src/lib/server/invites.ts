@@ -80,3 +80,35 @@ export async function sendBookingInvites(student: Attendee, before: Slot | null,
   const to = [student.email, ...interviewerOf(slot).emails];
   return sendEmails(mails(student, slot, after ? "REQUEST" : "CANCEL", to));
 }
+
+/**
+ * The board cancelled this conversation: the student gets the calendar
+ * cancellation, the board's note and their link to pick a new time; the
+ * team gets the calendar cancellation.
+ */
+export async function sendBoardCancellation(student: Attendee, slot: Slot, note: string) {
+  const team = interviewerOf(slot).emails.filter(Boolean);
+  const file = inviteIcs(student, slot, "CANCEL", [student.email, ...team]);
+  const when = formatSlot(slot);
+  const link = student.token ? `${siteConfig.url}/portal/enter?key=${student.token}` : `${siteConfig.url}/portal`;
+  const first = (student.name || "").trim().split(/\s+/)[0];
+  const out: Mail[] = [
+    {
+      to: student.email,
+      subject: `Please pick a new time: ${siteConfig.name} conversation`,
+      text:
+        `Hi${first ? ` ${first}` : ""},\n\n` +
+        `We had to cancel your ${siteConfig.name} conversation on ${when}. Sorry about that.` +
+        (note ? `\n\n${note}` : "") +
+        `\n\nPick a new time here (it's your private link, so keep it to yourself):\n${link}\n\n— CORE`,
+      calendar: { method: "CANCEL", content: file },
+    },
+    ...team.map((to) => ({
+      to,
+      subject: `Cancelled: ${siteConfig.name} conversation with ${student.name || student.email}, ${when}`,
+      text: `You cancelled this conversation from the board. ${student.name || student.email} has been asked to pick a new time.`,
+      calendar: { method: "CANCEL" as const, content: file },
+    })),
+  ];
+  return sendEmails(out);
+}

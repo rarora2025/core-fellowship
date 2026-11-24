@@ -91,6 +91,10 @@ const supabase = {
     const rows = await sb(`/rest/v1/portal_tokens?token=eq.${q(token)}&select=application_id`);
     return (rows?.[0]?.application_id as string) ?? null;
   },
+  async tokenFor(applicationId: string) {
+    const rows = await sb(`/rest/v1/portal_tokens?application_id=eq.${q(applicationId)}&select=token&order=created_at.desc&limit=1`);
+    return (rows?.[0]?.token as string) ?? null;
+  },
   async readProfile(applicationId: string) {
     const rows = await sb(`/rest/v1/profiles?application_id=eq.${q(applicationId)}&select=profile`);
     return rows?.[0]?.profile ?? null;
@@ -224,6 +228,10 @@ const files = {
   async applicationIdForToken(token: string) {
     return (await readJson<Record<string, string>>(TOKENS, {}))[token] ?? null;
   },
+  async tokenFor(applicationId: string) {
+    const map = await readJson<Record<string, string>>(TOKENS, {});
+    return Object.keys(map).find((t) => map[t] === applicationId) ?? null;
+  },
   async readProfile(applicationId: string) {
     const raw = await readJson<{ profile?: unknown } | null>(path.join(PROFILES, `${applicationId}.json`), null);
     return raw?.profile ?? null;
@@ -298,6 +306,8 @@ export const store = {
   getApplication: (id: string) => (ID.test(id) ? backend.getApplication(id) : Promise.resolve(null)),
   createToken: (token: string, applicationId: string) => backend.createToken(token, applicationId),
   applicationIdForToken: (token: string) => backend.applicationIdForToken(token),
+  /** The student's private link token, to send them back in. */
+  tokenFor: (applicationId: string) => (ID.test(applicationId) ? backend.tokenFor(applicationId) : Promise.resolve(null)),
   readProfile: (applicationId: string) => backend.readProfile(applicationId),
   saveProfile: (applicationId: string, profile: unknown) => backend.saveProfile(applicationId, profile),
   bookings: () => backend.bookings(),

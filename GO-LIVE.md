@@ -23,7 +23,10 @@ real Supabase project. What's left needs the domain.
   interview times and booked conversations (Dev and Rahul are on every
   interview and both get every invite). Press Edit times, drag over the
   times you're free (in person or a Google Meet link) and save; students can
-  book them straight away. Booked and past times are locked.
+  book them straight away. Booked and past times are locked. Click a booked
+  conversation to cancel it: the student is emailed their private link to
+  pick a new time (with an optional note), and you both get the calendar
+  cancellation.
 - **Board** (`/board`, one shared password): everyone who applied as a
   table. Search, sort, group into pools (by role, space, year, where, work
   authorization, interview status), and click anyone for their full

@@ -11,11 +11,13 @@ import {
   MapPin,
   Pencil,
   Video,
+  X,
 } from "lucide-react";
 
 import { BoardTabs } from "@/components/board/board-tabs";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { Textarea } from "@/components/ui/textarea";
 import { easeOutSoft } from "@/components/motion/easing";
 import { portalCard } from "@/components/portal/ui";
 import {
@@ -92,6 +94,7 @@ export function ScheduleView({
   const [saving, setSaving] = React.useState(false);
   const [error, setError] = React.useState<string | null>(null);
   const [saved, setSaved] = React.useState<string | null>(null);
+  const [open, setOpen] = React.useState<WeekBooking | null>(null);
   // A drag marks (or clears) the whole box from where it started to the pointer, like when2meet.
   const drag = React.useRef<{
     mode: "add" | "remove";
@@ -427,16 +430,19 @@ export function ScheduleView({
                                 : free.get(`${k}|${iso}`);
                             if (b) {
                               return (
-                                <span
+                                <button
                                   key={k}
+                                  type="button"
                                   title={`${b.name} · ${formatRange(b)}`}
+                                  disabled={!!editing}
+                                  onClick={() => setOpen(b)}
                                   className={cn(
-                                    "flex min-w-0 flex-1 items-center rounded-[5px] px-1.5 text-[11px] font-medium",
+                                    "flex min-w-0 flex-1 items-center rounded-[5px] px-1.5 text-left text-[11px] font-medium outline-none transition-[filter] focus-visible:ring-2 focus-visible:ring-ring/60 enabled:hover:brightness-95",
                                     TONES[k].solid,
                                   )}
                                 >
                                   <span className="truncate">{b.name}</span>
-                                </span>
+                                </button>
                               );
                             }
                             if (loc) {
@@ -497,10 +503,12 @@ export function ScheduleView({
               {shownBookings.map((b) => {
                 const p = dayParts(b.start);
                 return (
-                  <li
-                    key={`${b.interviewer}${b.start}`}
-                    className="flex items-center gap-3 rounded-xl px-3 py-2.5"
-                  >
+                  <li key={`${b.interviewer}${b.start}`}>
+                    <button
+                      type="button"
+                      onClick={() => setOpen(b)}
+                      className="flex w-full items-center gap-3 rounded-xl px-3 py-2.5 text-left outline-none transition-colors hover:bg-muted/60 focus-visible:ring-[3px] focus-visible:ring-ring/50"
+                    >
                     <span
                       className="flex w-12 shrink-0 flex-col items-center rounded-xl border border-border py-1 leading-tight"
                       aria-hidden="true"
@@ -528,6 +536,7 @@ export function ScheduleView({
                         </span>
                       </span>
                     </span>
+                    </button>
                   </li>
                 );
               })}
@@ -631,6 +640,148 @@ export function ScheduleView({
           </motion.div>
         )}
       </AnimatePresence>
+      <AnimatePresence>
+        {open && (
+          <BookingPanel
+            key={open.applicantId}
+            booking={open}
+            onClose={() => setOpen(null)}
+            onCancelled={(msg) => {
+              setOpen(null);
+              setSaved(msg);
+              router.refresh();
+            }}
+          />
+        )}
+      </AnimatePresence>
     </main>
+  );
+}
+
+/** One booked conversation: who, when, where, and cancelling it. */
+function BookingPanel({
+  booking,
+  onClose,
+  onCancelled,
+}: {
+  booking: WeekBooking;
+  onClose: () => void;
+  onCancelled: (message: string) => void;
+}) {
+  const reduce = !!useReducedMotion();
+  const [note, setNote] = React.useState("");
+  const [sure, setSure] = React.useState(false);
+  const [busy, setBusy] = React.useState(false);
+  const [error, setError] = React.useState<string | null>(null);
+  const over = new Date(booking.end).getTime() <= Date.now();
+  const first = booking.name.trim().split(/\s+/)[0];
+
+  React.useEffect(() => {
+    const onKey = (e: KeyboardEvent) => e.key === "Escape" && onClose();
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, [onClose]);
+
+  async function cancel() {
+    if (!sure) return setSure(true);
+    setBusy(true);
+    setError(null);
+    const res = await fetch("/api/board/cancel", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ applicationId: booking.applicantId, note }),
+    }).catch(() => null);
+    const body = await res?.json().catch(() => ({}));
+    setBusy(false);
+    if (!res?.ok) return setError(body?.error ?? "That didn't go through. Try again.");
+    onCancelled(
+      body.emailed
+        ? `Cancelled. We emailed ${first} to pick a new time.`
+        : `Cancelled, and the time is open again. Email isn't set up yet, so message ${first} yourself to rebook.`,
+    );
+  }
+
+  return (
+    <motion.div
+      className="fixed inset-0 z-50 grid place-items-center bg-black/40 p-4 backdrop-blur-[2px]"
+      initial={{ opacity: 0 }}
+      animate={{ opacity: 1 }}
+      exit={{ opacity: 0 }}
+      onClick={onClose}
+    >
+      <motion.div
+        role="dialog"
+        aria-modal="true"
+        aria-label={`${booking.name}'s conversation`}
+        initial={{ opacity: 0, y: reduce ? 0 : 12, scale: reduce ? 1 : 0.98 }}
+        animate={{ opacity: 1, y: 0, scale: 1 }}
+        exit={{ opacity: 0, y: reduce ? 0 : 8 }}
+        transition={{ duration: 0.35, ease: easeOutSoft }}
+        onClick={(e) => e.stopPropagation()}
+        className="w-full max-w-[440px] overflow-hidden rounded-[24px] bg-background shadow-[0_24px_64px_-24px_rgb(var(--shadow-color)/0.5)]"
+      >
+        <div className="relative bg-cta px-6 pb-5 pt-4 text-white">
+          <div className="flex justify-end">
+            <button
+              type="button"
+              onClick={onClose}
+              aria-label="Close"
+              autoFocus
+              className="-mr-2 grid size-9 place-items-center rounded-full text-white/85 transition-colors hover:bg-white/15 hover:text-white"
+            >
+              <X className="size-[18px]" />
+            </button>
+          </div>
+          <p className="font-display text-[22px] font-bold leading-tight tracking-[-0.02em]">{booking.name}</p>
+          <p className="mt-1 text-[14px] text-white/90">
+            {dayParts(booking.start).weekday}, {dayParts(booking.start).month} {dayParts(booking.start).day} · {formatRange(booking)}
+          </p>
+          <p className="mt-0.5 text-[14px] text-white/80">{placeOf(booking).label}</p>
+        </div>
+
+        <div className="grid gap-3 p-6">
+          {over ? (
+            <p className="text-[14px] text-muted-foreground">This conversation has already happened.</p>
+          ) : (
+            <>
+              <p className="text-[14px] text-muted-foreground">
+                Cancelling frees this time and emails {first} to pick a new one, with their private link. You both get the calendar
+                cancellation.
+              </p>
+              <label className="grid gap-1.5">
+                <span className="text-[13px] font-medium">Note to {first} (optional)</span>
+                <Textarea
+                  value={note}
+                  onChange={(e) => setNote(e.target.value.slice(0, 600))}
+                  placeholder="Sorry, something came up on our end."
+                  rows={3}
+                />
+              </label>
+              {error && (
+                <p role="alert" className="text-[13px] text-destructive">
+                  {error}
+                </p>
+              )}
+              <div className="mt-1 flex flex-wrap justify-end gap-2">
+                <Button variant="ghost" className="h-10 rounded-full px-4" onClick={onClose} disabled={busy}>
+                  Keep it
+                </Button>
+                <Button
+                  className={cn(
+                    "h-10 rounded-full px-4 font-semibold",
+                    sure ? "bg-destructive text-white hover:bg-destructive/90" : "border border-destructive/40 bg-transparent text-destructive hover:bg-destructive/10",
+                  )}
+                  onClick={cancel}
+                  disabled={busy}
+                >
+                  {busy && <Loader2 className="animate-spin" />}
+                  {sure ? "Yes, cancel it" : "Cancel and ask them to rebook"}
+                </Button>
+              </div>
+            </>
+          )}
+        </div>
+      </motion.div>
+    </motion.div>
   );
 }
