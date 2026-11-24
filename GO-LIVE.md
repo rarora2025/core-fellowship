@@ -12,8 +12,7 @@ real Supabase project. What's left needs the domain.
   work link, optional referral → "That's the outline" → book.
 - **Book** (`/portal/interview`): 20-minute times, one per student; move or
   cancel until 2 hours before. The database refuses a time someone else
-  holds. Each time belongs to one interviewer; if two are free at once the
-  student sees the time once.
+  holds.
 - **Calendar invites**, built like LionApps': booking emails the student and
   both of you a real invite (Gmail adds it to the calendar);
   a move updates the same event, a cancel removes it. The student's email
@@ -27,8 +26,8 @@ real Supabase project. What's left needs the domain.
   book them straight away. Booked and past times are locked.
 - **Board** (`/board`, one shared password): everyone who applied as a
   table. Search, sort, group into pools (by role, space, year, where, work
-  authorization, interview status or interviewer), filter to one
-  interviewer, and click anyone for their full profile, resume, LinkedIn and
+  authorization, interview status), and click anyone for their full
+  profile, resume, LinkedIn and
   work link. Export CSV for startups. Once signed in, a "Board" link shows in
   the top bar; on the board, "Student view" goes back. On localhost
   (`npm run dev`, opened as localhost) the board is always open with no
@@ -60,8 +59,7 @@ real Supabase project. What's left needs the domain.
 ## Before opening applications
 
 - Set the real interview times on the board's Schedule tab (the ones there
-  now are placeholders from Dec 1 to 7). Both interviewers' addresses are
-  in `interviewers` in `src/content/interviews.ts`.
-- Delete the test applicants (names start with "Test Applicant", emails
-  `zz-test-…@columbia.edu`) in Supabase → Table Editor → `applications`.
+  now are placeholders from Dec 1 to 7). Dev's and Rahul's addresses are
+  in `team` in `src/content/interviews.ts`.
+- Delete any test applications in Supabase → Table Editor → `applications`.
 - Book one real test interview and check both invites arrive.
