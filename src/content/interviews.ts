@@ -15,11 +15,10 @@ export const interviewConfig = {
 /**
  * Who interviews. Each window below names one of them; their email
  * gets the calendar invite along with the student's.
- * TODO(CORE): put in the real addresses.
  */
 export const interviewers = {
-  dev: { name: "Dev", email: "" },
-  rahul: { name: "Rahul", email: "" },
+  dev: { name: "Dev", email: "dg3592@columbia.edu" },
+  rahul: { name: "Rahul", email: "ra3206@columbia.edu" },
 } as const;
 
 export type InterviewerKey = keyof typeof interviewers;
