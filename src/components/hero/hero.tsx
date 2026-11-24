@@ -2,7 +2,7 @@
 
 import { motion, useReducedMotion } from "framer-motion";
 
-import { StartCard } from "@/components/hero/start-card";
+import { StartCard, WelcomeBack } from "@/components/hero/start-card";
 import { Circle, Marker, Note, Underline } from "@/components/hero/hand-drawn";
 import type { Accent } from "@/components/hero/accents";
 import { CoreWord } from "@/components/hero/core-word";
@@ -13,7 +13,14 @@ import { heroContent } from "@/content/site";
  * Quiet, centered hero. The only "visual" is the real thing:
  * the card where an application starts.
  */
-export function Hero({ accent = "marker" }: { accent?: Accent }) {
+export function Hero({
+  accent = "marker",
+  returning = null,
+}: {
+  accent?: Accent;
+  /** Someone who has already applied, in this browser. */
+  returning?: { first: string } | null;
+}) {
   const reduce = !!useReducedMotion();
   const rise = (delay: number, y = 16) => ({
     initial: { opacity: 0, y: reduce ? 0 : y },
@@ -53,7 +60,7 @@ export function Hero({ accent = "marker" }: { accent?: Accent }) {
         </motion.h1>
 
         <motion.div {...rise(0.6, 24)} className="mt-10 w-full max-w-[420px]">
-          <StartCard />
+          {returning ? <WelcomeBack first={returning.first} /> : <StartCard />}
         </motion.div>
       </div>
     </section>

@@ -106,3 +106,5 @@ order by a.received_at desc;
 -- The site's server may read the overview (for a board page later); nobody else.
 grant select on public.applicant_overview to service_role;
 revoke all on public.applicant_overview from anon, authenticated;
+
+-- Interview times: see supabase/availability.sql (run it after this file).

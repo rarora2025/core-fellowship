@@ -1,6 +1,7 @@
 "use client";
 
 import * as React from "react";
+import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { ArrowRight } from "lucide-react";
 
@@ -65,5 +66,23 @@ export function StartCard() {
         </Button>
       </div>
     </form>
+  );
+}
+
+/** In place of the start card for someone who has already applied. */
+export function WelcomeBack({ first }: { first: string }) {
+  return (
+    <div className="w-full rounded-[22px] border border-border bg-card p-2 text-left shadow-[0_1px_2px_rgb(var(--shadow-color)/0.05),0_24px_48px_-24px_rgb(var(--shadow-color)/0.25)]">
+      <div className="px-3 pb-3 pt-4 sm:px-4">
+        <p className="text-[17px] font-medium tracking-[-0.01em]">Welcome back{first ? `, ${first}` : ""}.</p>
+        <p className="mt-1 text-[14px] text-muted-foreground">You&apos;ve applied. Your profile and your conversation are in your portal.</p>
+        <Button asChild size="lg" variant="cta" className="mt-4 h-12 w-full rounded-xl">
+          <Link href="/portal">
+            Go to my portal
+            <ArrowRight className="transition-transform duration-300 group-hover/button:translate-x-0.5" />
+          </Link>
+        </Button>
+      </div>
+    </div>
   );
 }

@@ -3,9 +3,10 @@ import "server-only";
 import { createHash, timingSafeEqual } from "node:crypto";
 import { cookies, headers } from "next/headers";
 
-import { interviewers } from "@/content/interviews";
-import { findSlot, interviewerOf, type Slot } from "@/lib/interviews";
+import { findIn, slotsFrom, type Slot } from "@/lib/interviews";
 import { sanitizeProfile, type StudentProfile } from "@/lib/profile";
+import { sendBoardCancellation } from "@/lib/server/invites";
+import { bookingFor } from "@/lib/server/portal";
 import { store } from "@/lib/server/store";
 
 /**
@@ -79,17 +80,18 @@ export type Applicant = {
   resumeId: string | null;
   referrals: { name: string; email: string }[];
   profile: StudentProfile;
-  booking: (Slot & { interviewerName: string }) | null;
+  booking: Slot | null;
 };
 
 const str = (v: unknown) => (typeof v === "string" ? v : Array.isArray(v) ? v.filter((x) => typeof x === "string").join(", ") : "");
 
 export async function loadApplicants(): Promise<Applicant[]> {
-  const [apps, profiles, bookings] = await Promise.all([store.allApplications(), store.allProfiles(), store.bookings()]);
+  const [apps, profiles, bookings, windows] = await Promise.all([store.allApplications(), store.allProfiles(), store.bookings(), store.windows()]);
+  const slots = slotsFrom(windows);
   const slotOf: Record<string, string> = {};
   for (const [slotId, appId] of Object.entries(bookings)) slotOf[appId] = slotId;
   return apps.map(({ id, receivedAt, application: a }) => {
-    const slot = slotOf[id] ? findSlot(slotOf[id]) : null;
+    const slot = slotOf[id] ? findIn(slots, slotOf[id]) : null;
     const resume = a.resume as { id?: string } | null;
     const referrals = Array.isArray(a.referrals) ? (a.referrals as { name?: unknown; email?: unknown }[]) : [];
     return {
@@ -104,9 +106,30 @@ export async function loadApplicants(): Promise<Applicant[]> {
       resumeId: typeof resume?.id === "string" ? resume.id : null,
       referrals: referrals.map((r) => ({ name: str(r.name), email: str(r.email) })).filter((r) => r.name || r.email),
       profile: sanitizeProfile(profiles[id]),
-      booking: slot ? { ...slot, interviewerName: interviewerOf(slot).name } : null,
+      booking: slot,
     };
   });
 }
 
-export const interviewerNames = Object.values(interviewers).map((i) => i.name);
+
+/**
+ * Cancel a student's conversation from the board and ask them to rebook.
+ * Returns whether the email went out, so the board can say so honestly.
+ */
+export async function cancelFromBoard(applicationId: string, note: string) {
+  const slot = await bookingFor(applicationId);
+  if (!slot) return { ok: false as const, error: "They don't have a booking anymore." };
+  if (new Date(slot.end).getTime() <= Date.now()) return { ok: false as const, error: "That conversation has already happened." };
+  const record = await store.getApplication(applicationId);
+  if (!record) return { ok: false as const, error: "That applicant isn't there anymore." };
+  await store.cancel(applicationId);
+  const a = record.application as Record<string, unknown>;
+  const student = {
+    id: applicationId,
+    name: str(a.name),
+    email: str(a.email),
+    token: (await store.tokenFor(applicationId)) ?? undefined,
+  };
+  const sent = await sendBoardCancellation(student, slot, note.trim().slice(0, 600));
+  return { ok: true as const, emailed: !sent.skipped && sent.sent > 0 && !sent.error, name: student.name || student.email };
+}

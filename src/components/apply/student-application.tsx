@@ -187,6 +187,11 @@ export function StudentApplicationForm({ initialEmail = "" }: { initialEmail?: s
         showFirstError(body.errors);
         return;
       }
+      if (res.status === 409 && body.alreadyApplied) {
+        setStatus("idle");
+        setError(body.error);
+        return;
+      }
       if (!res.ok) throw new Error(String(res.status));
       clearDraft();
       setStatus("sent");

@@ -1,6 +1,8 @@
 import "server-only";
 
 import { randomUUID } from "node:crypto";
+
+import type { InterviewerKey, InterviewWindow } from "@/content/interviews";
 import { mkdir, readdir, readFile, rename, stat, writeFile } from "node:fs/promises";
 import path from "node:path";
 
@@ -77,6 +79,12 @@ const supabase = {
     });
     return rows[0].id as string;
   },
+  async applicationIdForEmail(email: string) {
+    // Case-insensitive exact match: escape the characters ilike treats as wildcards.
+    const exact = email.replace(/[\\_%]/g, (c) => `\\${c}`);
+    const rows = await sb(`/rest/v1/applications?email=ilike.${q(exact)}&select=id&order=received_at.asc&limit=1`);
+    return (rows?.[0]?.id as string) ?? null;
+  },
   async getApplication(id: string): Promise<StoredApplication | null> {
     const rows = await sb(`/rest/v1/applications?id=eq.${q(id)}&select=id,received_at,data`);
     const r = rows?.[0];
@@ -88,6 +96,10 @@ const supabase = {
   async applicationIdForToken(token: string) {
     const rows = await sb(`/rest/v1/portal_tokens?token=eq.${q(token)}&select=application_id`);
     return (rows?.[0]?.application_id as string) ?? null;
+  },
+  async tokenFor(applicationId: string) {
+    const rows = await sb(`/rest/v1/portal_tokens?application_id=eq.${q(applicationId)}&select=token&order=created_at.desc&limit=1`);
+    return (rows?.[0]?.token as string) ?? null;
   },
   async readProfile(applicationId: string) {
     const rows = await sb(`/rest/v1/profiles?application_id=eq.${q(applicationId)}&select=profile`);
@@ -123,6 +135,29 @@ const supabase = {
     const rows: { application_id: string; profile: unknown }[] = await sb("/rest/v1/profiles?select=application_id,profile&limit=5000");
     return Object.fromEntries(rows.map((r) => [r.application_id, r.profile]));
   },
+  async windows(): Promise<InterviewWindow[]> {
+    const rows: { interviewer: InterviewerKey; starts_at: string; ends_at: string; location: string }[] = await sb(
+      "/rest/v1/interview_windows?select=interviewer,starts_at,ends_at,location&order=starts_at&limit=5000"
+    );
+    return rows.map((r) => ({
+      interviewer: r.interviewer,
+      start: new Date(r.starts_at).toISOString(),
+      end: new Date(r.ends_at).toISOString(),
+      location: r.location,
+    }));
+  },
+  /** One person's free blocks inside [from, to), replaced in one step. */
+  async replaceWindows(interviewer: InterviewerKey, from: string, to: string, windows: InterviewWindow[]) {
+    await sb("/rest/v1/rpc/replace_windows", {
+      method: "POST",
+      body: JSON.stringify({
+        p_interviewer: interviewer,
+        p_from: from,
+        p_to: to,
+        p_windows: windows.map((w) => ({ start: w.start, end: w.end, location: w.location })),
+      }),
+    });
+  },
   /** A link to the PDF that works for ten minutes. */
   async resume(id: string): Promise<{ url: string } | null> {
     const res = await sb(`/storage/v1/object/sign/resumes/${q(id)}.pdf`, {
@@ -144,6 +179,7 @@ const STUDENTS = path.join(ROOT, "students");
 const PROFILES = path.join(ROOT, "profiles");
 const TOKENS = path.join(ROOT, "portal", "tokens.json");
 const BOOKINGS = path.join(ROOT, "bookings.json");
+const WINDOWS = path.join(ROOT, "windows.json");
 
 async function readJson<T>(file: string, fallback: T): Promise<T> {
   try {
@@ -185,6 +221,11 @@ const files = {
     await writeJson(path.join(STUDENTS, `${id}.json`), { id, receivedAt: new Date().toISOString(), application });
     return id;
   },
+  async applicationIdForEmail(email: string) {
+    const all = await files.allApplications();
+    const match = all.reverse().find((a) => String(a.application.email ?? "").toLowerCase() === email.toLowerCase());
+    return match?.id ?? null;
+  },
   async getApplication(id: string): Promise<StoredApplication | null> {
     return readJson<StoredApplication | null>(path.join(STUDENTS, `${id}.json`), null);
   },
@@ -197,6 +238,10 @@ const files = {
   },
   async applicationIdForToken(token: string) {
     return (await readJson<Record<string, string>>(TOKENS, {}))[token] ?? null;
+  },
+  async tokenFor(applicationId: string) {
+    const map = await readJson<Record<string, string>>(TOKENS, {});
+    return Object.keys(map).find((t) => map[t] === applicationId) ?? null;
   },
   async readProfile(applicationId: string) {
     const raw = await readJson<{ profile?: unknown } | null>(path.join(PROFILES, `${applicationId}.json`), null);
@@ -242,6 +287,16 @@ const files = {
     }
     return out;
   },
+  async windows(): Promise<InterviewWindow[]> {
+    return readJson<InterviewWindow[]>(WINDOWS, []);
+  },
+  replaceWindows(interviewer: InterviewerKey, from: string, to: string, windows: InterviewWindow[]) {
+    return locked(async () => {
+      const all = await readJson<InterviewWindow[]>(WINDOWS, []);
+      const keep = all.filter((w) => !(w.interviewer === interviewer && w.start >= from && w.start < to));
+      await writeJson(WINDOWS, [...keep, ...windows].sort((a, b) => a.start.localeCompare(b.start)));
+    });
+  },
   async resume(id: string): Promise<{ bytes: Uint8Array } | null> {
     try {
       return { bytes: await readFile(path.join(RESUMES, `${id}.pdf`)) };
@@ -260,14 +315,25 @@ export const store = {
   resumeExists: (id: string) => (ID.test(id) ? backend.resumeExists(id) : Promise.resolve(false)),
   saveApplication: (a: Record<string, unknown>) => backend.saveApplication(a),
   getApplication: (id: string) => (ID.test(id) ? backend.getApplication(id) : Promise.resolve(null)),
+  /** An application already sent from this email, if any (case doesn't matter). */
+  applicationIdForEmail: (email: string) => {
+    const e = email.trim().toLowerCase();
+    return /^[^\s@*,()]+@[^\s@*,()]+$/.test(e) ? backend.applicationIdForEmail(e) : Promise.resolve(null);
+  },
   createToken: (token: string, applicationId: string) => backend.createToken(token, applicationId),
   applicationIdForToken: (token: string) => backend.applicationIdForToken(token),
+  /** The student's private link token, to send them back in. */
+  tokenFor: (applicationId: string) => (ID.test(applicationId) ? backend.tokenFor(applicationId) : Promise.resolve(null)),
   readProfile: (applicationId: string) => backend.readProfile(applicationId),
   saveProfile: (applicationId: string, profile: unknown) => backend.saveProfile(applicationId, profile),
   bookings: () => backend.bookings(),
   /** Book or move. False when someone else already holds the slot. */
   book: (applicationId: string, slotId: string) => backend.book(applicationId, slotId),
   cancel: (applicationId: string) => backend.cancel(applicationId),
+  /** Free blocks of interview time, set on the board's Schedule tab. */
+  windows: () => backend.windows(),
+  replaceWindows: (interviewer: InterviewerKey, from: string, to: string, windows: InterviewWindow[]) =>
+    backend.replaceWindows(interviewer, from, to, windows),
   /** Board only. */
   allApplications: () => backend.allApplications(),
   allProfiles: () => backend.allProfiles(),

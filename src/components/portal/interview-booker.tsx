@@ -4,34 +4,16 @@ import * as React from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { AnimatePresence, motion, useReducedMotion } from "framer-motion";
-import { ArrowLeft, CalendarPlus, Loader2, MapPin, Video } from "lucide-react";
+import { ArrowLeft, CalendarPlus, Loader2 } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
-import { CoreBulb } from "@/components/brand/core-bulb";
 import { Marker } from "@/components/hero/hand-drawn";
+import { BookingTicket, Place } from "@/components/portal/booking-ticket";
 import { easeOutSoft } from "@/components/motion/easing";
-import { portalCard, portalTitle } from "@/components/portal/ui";
+import { portalCard, portalTitle, ticketButton } from "@/components/portal/ui";
 import { interviewCopy } from "@/content/interviews";
-import { dayParts, formatDay, formatRange, formatSlot, formatTime, placeOf, type Slot } from "@/lib/interviews";
+import { dayParts, formatDay, formatSlot, formatTime, type Slot } from "@/lib/interviews";
 import { cn } from "@/lib/utils";
-
-/** Where it happens, with the right icon; a Meet link opens. */
-function Place({ slot, className }: { slot: Slot; className?: string }) {
-  const place = placeOf(slot);
-  const Icon = place.url ? Video : MapPin;
-  return (
-    <span className={cn("inline-flex items-center gap-1.5", className)}>
-      <Icon className="size-3.5 shrink-0" aria-hidden="true" />
-      {place.url ? (
-        <a href={place.url} target="_blank" rel="noreferrer" className="underline-offset-4 hover:underline">
-          {place.label}
-        </a>
-      ) : (
-        place.label
-      )}
-    </span>
-  );
-}
 
 /**
  * Pick a day → pick a time → confirm → booked. One interview per
@@ -146,56 +128,21 @@ export function InterviewBooker({
       </p>
 
       {mine && (
-        <motion.section
-          initial={reduce ? false : { opacity: 0, y: 14, scale: 0.98 }}
-          animate={{ opacity: 1, y: 0, scale: 1 }}
-          transition={{ duration: 0.8, ease: easeOutSoft }}
-          className="relative mt-9 overflow-hidden rounded-[24px] bg-cta text-white shadow-[0_24px_48px_-24px_rgb(var(--shadow-color)/0.45)]"
-          aria-label="Your conversation"
-        >
-          <CoreBulb lightUp className="pointer-events-none absolute -right-3 -top-4 h-40 w-auto text-white/15 sm:right-6 sm:h-44" />
-          <div className="relative p-6 pb-5 sm:p-7 sm:pb-6">
-            <p className="font-display text-[14px] font-bold tracking-[-0.01em] text-white/85">CORE Fellowship</p>
-            <p className="mt-5 text-[14px] text-white/80">{formatDay(mine.start)}</p>
-            <p className="mt-0.5 font-display text-[clamp(1.6rem,1.3rem+1.4vw,2.1rem)] font-bold leading-tight tracking-[-0.02em]">
-              {formatRange(mine)}
-            </p>
-            <p className="mt-3 flex flex-wrap items-center gap-x-3 gap-y-1 text-[14px] text-white/90">
-              <Place slot={mine} />
-              <span aria-hidden="true" className="text-white/50">·</span>
-              <span>{interviewCopy.length}</span>
-            </p>
-          </div>
-          {/* Ticket tear line */}
-          <div aria-hidden="true" className="relative mx-6 border-t border-dashed border-white/35 sm:mx-7" />
-          <div className="relative flex flex-wrap items-center gap-2 p-4 sm:px-7">
-            <a
-              href="/api/portal/interview/ics"
-              className="inline-flex h-9 items-center gap-1.5 rounded-full bg-white px-3.5 text-[13.5px] font-medium text-[#1d4f99] transition-colors hover:bg-white/90"
-            >
-              <CalendarPlus className="size-4" aria-hidden="true" />
-              Add to calendar
-            </a>
-            {!picking && (
-              <button
-                type="button"
-                onClick={() => setPicking(true)}
-                className="inline-flex h-9 items-center rounded-full border border-white/45 px-3.5 text-[13.5px] font-medium transition-colors hover:bg-white/10"
-              >
-                Change time
-              </button>
-            )}
-            <button
-              type="button"
-              onClick={cancel}
-              disabled={busy === "cancel"}
-              className="inline-flex h-9 items-center gap-1.5 rounded-full px-3 text-[13.5px] text-white/85 transition-colors hover:bg-white/10 hover:text-white"
-            >
-              {busy === "cancel" && <Loader2 className="size-4 animate-spin" />}
-              {confirmCancel ? "Tap again to cancel" : "Cancel"}
+        <BookingTicket slot={mine} className="mt-9">
+          <a href="/api/portal/interview/ics" className={ticketButton.primary}>
+            <CalendarPlus className="size-4" aria-hidden="true" />
+            Add to calendar
+          </a>
+          {!picking && (
+            <button type="button" onClick={() => setPicking(true)} className={ticketButton.outline}>
+              Change time
             </button>
-          </div>
-        </motion.section>
+          )}
+          <button type="button" onClick={cancel} disabled={busy === "cancel"} className={ticketButton.quiet}>
+            {busy === "cancel" && <Loader2 className="size-4 animate-spin" />}
+            {confirmCancel ? "Tap again to cancel" : "Cancel"}
+          </button>
+        </BookingTicket>
       )}
 
       <AnimatePresence initial={false}>

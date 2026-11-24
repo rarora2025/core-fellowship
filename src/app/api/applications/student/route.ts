@@ -8,6 +8,7 @@ import {
 import { checkProfileField, profileFields, sanitizeProfile } from "@/lib/profile";
 import { resumeExists, saveStudentApplication } from "@/lib/server/submissions";
 import { createPortalToken, saveProfile, SESSION_COOKIE, sessionCookie } from "@/lib/server/portal";
+import { store } from "@/lib/server/store";
 
 export const runtime = "nodejs";
 
@@ -36,6 +37,16 @@ export async function POST(request: Request) {
   }
   if (Object.keys(errors).length) {
     return NextResponse.json({ ok: false, errors }, { status: 422 });
+  }
+
+  // Already applied from this email? No second application. And no signing
+  // in either: typing someone's email must never open their portal. They
+  // get back in with the private link from when they applied.
+  if (await store.applicationIdForEmail(application.email)) {
+    return NextResponse.json(
+      { ok: false, alreadyApplied: true, error: "You've already applied with this email. Use the private link from when you applied to get back in." },
+      { status: 409 }
+    );
   }
 
   // The profile lives in its own table, so the portal can edit it later.

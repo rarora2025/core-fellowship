@@ -1,5 +1,5 @@
 import { environmentPairs } from "@/content/profile";
-import { formatSlot } from "@/lib/interviews";
+import { formatSlot, placeOf } from "@/lib/interviews";
 import { loadApplicants, onBoard } from "@/lib/server/board";
 
 export const runtime = "nodejs";
@@ -14,7 +14,7 @@ export async function GET() {
   const header = [
     "Name", "Email", "Grad year", "Major", "Where", "Work authorization", "Describes self as", "Fluent in",
     "Wants to do", "Spaces", "Into outside class", "How they like to work", "Company size", "LinkedIn", "Work link",
-    "Interview", "Interviewer", "Applied",
+    "Interview", "Where", "Applied",
   ];
   const rows = people.map((p) => [
     p.name, p.email, p.gradYear, p.major, p.profile.location.join("; "), p.profile.workAuth.join(""),
@@ -28,7 +28,7 @@ export async function GET() {
       .filter(Boolean)
       .join("; "),
     p.profile.companySize.join("; "), p.linkedin, p.workLink,
-    p.booking ? formatSlot(p.booking) : "", p.booking?.interviewerName ?? "", p.receivedAt.slice(0, 10),
+    p.booking ? formatSlot(p.booking) : "", p.booking ? placeOf(p.booking).label : "", p.receivedAt.slice(0, 10),
   ]);
   const csv = [header, ...rows].map((r) => r.map(cell).join(",")).join("\r\n") + "\r\n";
   return new Response(csv, {

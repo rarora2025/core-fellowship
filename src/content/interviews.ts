@@ -1,46 +1,45 @@
 /**
- * Interview availability. The board edits this list; every window
- * is cut into back-to-back slots of `slotMinutes`.
- *
- * TODO(CORE): these windows are placeholders. Replace with real
- * board availability (or move to the database once there is one).
+ * Interview settings. The times themselves are set on the board's
+ * Schedule tab and kept in the database (interview_windows); every
+ * free block is cut into back-to-back slots of `slotMinutes`.
  */
 export const interviewConfig = {
   timeZone: "America/New_York",
   slotMinutes: 20,
   /** Hours before a slot that booking/cancelling closes. */
   lockHours: 2,
+  /** The hours the Schedule grid shows, in New York time. */
+  dayStart: "08:00",
+  dayEnd: "22:00",
+  /** Where an in-person block happens unless someone types another room. */
+  defaultRoom: "Lerner Hall",
 };
 
+/** Who runs the interviews. Both are on every one and get every invite. */
+export const team = [
+  { name: "Dev", email: "dg3592@columbia.edu" },
+  { name: "Rahul", email: "ra3206@columbia.edu" },
+] as const;
+
 /**
- * Who interviews. Each window below names one of them; their email
- * gets the calendar invite along with the student's.
+ * One shared set of CORE interview times ("core"). Kept as a key so a
+ * second calendar could be added later without changing the database.
  */
 export const interviewers = {
-  dev: { name: "Dev", email: "dg3592@columbia.edu" },
-  rahul: { name: "Rahul", email: "ra3206@columbia.edu" },
+  core: { name: "CORE", emails: team.map((t) => t.email) },
 } as const;
 
 export type InterviewerKey = keyof typeof interviewers;
 
+/** A block of free time: cut into slots, booked by students. */
 export type InterviewWindow = {
-  /** YYYY-MM-DD, in interviewConfig.timeZone */
-  date: string;
-  /** HH:MM, 24-hour */
+  interviewer: InterviewerKey;
+  /** ISO instants */
   start: string;
   end: string;
   /** A room for in person, or a Google Meet link (https://meet.google.com/…) for online. */
   location: string;
-  interviewer: InterviewerKey;
 };
-
-export const interviewWindows: InterviewWindow[] = [
-  { date: "2026-12-01", start: "14:00", end: "16:00", location: "Lerner Hall", interviewer: "dev" },
-  { date: "2026-12-02", start: "18:00", end: "20:00", location: "Lerner Hall", interviewer: "rahul" },
-  { date: "2026-12-03", start: "11:00", end: "13:00", location: "Lerner Hall", interviewer: "dev" },
-  { date: "2026-12-04", start: "15:00", end: "17:00", location: "Lerner Hall", interviewer: "rahul" },
-  { date: "2026-12-07", start: "17:00", end: "19:00", location: "Lerner Hall", interviewer: "dev" },
-];
 
 export const interviewCopy = {
   length: "20 minutes",
