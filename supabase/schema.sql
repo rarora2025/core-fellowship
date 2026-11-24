@@ -47,6 +47,12 @@ alter table public.portal_tokens enable row level security;
 alter table public.profiles enable row level security;
 alter table public.bookings enable row level security;
 
+-- Newer Supabase projects don't always hand new tables to the API
+-- roles. The site's server (service_role) needs them; nobody else does.
+grant usage on schema public to service_role;
+grant select, insert, update, delete on all tables in schema public to service_role;
+revoke all on all tables in schema public from anon, authenticated;
+
 -- Book or move a student's interview in one step. Returns false if the
 -- slot is already taken (their old booking is kept in that case).
 create or replace function public.book_slot(p_application uuid, p_slot text)
@@ -73,7 +79,8 @@ values ('resumes', 'resumes', false)
 on conflict (id) do nothing;
 
 -- Handy view for the board: one row per applicant.
-create or replace view public.applicant_overview
+drop view if exists public.applicant_overview;
+create view public.applicant_overview
 with (security_invoker = true) as
 select
   a.received_at,
@@ -81,11 +88,21 @@ select
   a.email,
   a.data ->> 'major' as major,
   a.data ->> 'gradYear' as grad_year,
+  p.profile -> 'location' as location,
+  p.profile -> 'workAuth' ->> 0 as work_auth,
   p.profile -> 'roles' as roles,
-  p.profile -> 'availability' as availability,
+  p.profile -> 'interests' as spaces,
+  p.profile -> 'fascinations' as outside_class,
+  p.profile -> 'companySize' as company_size,
+  a.data ->> 'linkedin' as linkedin,
+  a.data ->> 'workLink' as work_link,
   b.slot_id as interview_slot,
   a.id
 from public.applications a
 left join public.profiles p on p.application_id = a.id
 left join public.bookings b on b.application_id = a.id
 order by a.received_at desc;
+
+-- The site's server may read the overview (for a board page later); nobody else.
+grant select on public.applicant_overview to service_role;
+revoke all on public.applicant_overview from anon, authenticated;

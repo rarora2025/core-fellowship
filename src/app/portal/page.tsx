@@ -55,7 +55,11 @@ export default async function PortalHome({
     <main id="main" className="mx-auto w-full max-w-[680px] px-5 pb-20 pt-12 sm:pt-16">
       <h1 className={portalTitle}>{first ? `Hi, ${first}.` : "Your portal"}</h1>
       <p className="mt-3 max-w-md text-[15px] leading-relaxed text-muted-foreground">
-        Two things to do here: fill in your profile, then pick a time to talk with us.
+        {booking
+          ? "You're all set. You can change your profile or your time here."
+          : progress.complete
+            ? "One thing left: pick a time to talk with us."
+            : "Two things to do here: finish your profile, then pick a time to talk with us."}
       </p>
 
       <ol className="mt-9 flex flex-wrap gap-x-6 gap-y-2 text-[13.5px]" aria-label="Your progress">

@@ -11,7 +11,7 @@ import { easeOutSoft } from "@/components/motion/easing";
 import { applyLinks } from "@/content/site";
 import { cn } from "@/lib/utils";
 
-export function Navbar() {
+export function Navbar({ board = false }: { board?: boolean }) {
   const [scrolled, setScrolled] = React.useState(false);
   const { scrollY } = useScroll();
   useMotionValueEvent(scrollY, "change", (y) => setScrolled(y > 12));
@@ -31,6 +31,14 @@ export function Navbar() {
         className="mx-auto flex h-16 max-w-[1280px] items-center justify-end px-5 sm:px-8"
       >
         <div className="flex items-center gap-1.5">
+          {board && (
+            <Link
+              href="/board"
+              className="rounded-full px-3 py-2 text-[14px] text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
+            >
+              Board
+            </Link>
+          )}
           <ThemeToggle />
           <Button asChild size="sm" variant="cta">
             <Link href={applyLinks.student.href}>

@@ -5,6 +5,7 @@ import { cookies } from "next/headers";
 
 import { emptyProfile, sanitizeProfile, type StudentProfile } from "@/lib/profile";
 import { findSlot, isOpen, type Slot } from "@/lib/interviews";
+import { sendBookingInvites } from "@/lib/server/invites";
 import { store } from "@/lib/server/store";
 
 /**
@@ -95,8 +96,13 @@ export async function takenSlotIds(): Promise<string[]> {
 
 export class BookingError extends Error {}
 
-/** Book (or move) this student's interview. One booking per student. */
-export async function bookSlot(id: string, slotId: string) {
+/**
+ * Book (or move) this student's interview. One booking per student.
+ * The database refuses a time someone else holds; then the student and
+ * the interviewer get a calendar invite (and a move updates it).
+ */
+export async function bookSlot(me: PortalStudent, slotId: string) {
+  const id = me.id;
   const slot = findSlot(slotId);
   if (!slot) throw new BookingError("That time doesn't exist anymore. Pick another.");
   if (!isOpen(slot)) throw new BookingError("That time is too soon to book. Pick a later one.");
@@ -104,12 +110,16 @@ export async function bookSlot(id: string, slotId: string) {
   if (current && current.id !== slotId && !isOpen(current)) {
     throw new BookingError("Your interview is too soon to move. Email us instead.");
   }
+  if (current?.id === slotId) return slot;
   if (!(await store.book(id, slotId))) throw new BookingError("Someone just took that time. Pick another.");
+  await sendBookingInvites(me, current, slot);
   return slot;
 }
 
-export async function cancelBooking(id: string) {
-  const current = await bookingFor(id);
-  if (current && !isOpen(current)) throw new BookingError("Your interview is too soon to cancel here. Email us instead.");
-  await store.cancel(id);
+export async function cancelBooking(me: PortalStudent) {
+  const current = await bookingFor(me.id);
+  if (!current) return;
+  if (!isOpen(current)) throw new BookingError("Your interview is too soon to cancel here. Email us instead.");
+  await store.cancel(me.id);
+  await sendBookingInvites(me, current, null);
 }

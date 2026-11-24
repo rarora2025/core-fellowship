@@ -7,6 +7,7 @@ import {
   resumeRules,
   studentEmailDomains,
 } from "@/content/student-application";
+import { emptyProfile, type StudentProfile } from "@/lib/profile";
 
 export type Referral = { name: string; email: string };
 
@@ -19,7 +20,11 @@ export type StudentApplication = {
   major: string;
   linkedin: string;
   resume: ResumeMeta | null;
+  /** Optional: GitHub, portfolio, a project. */
+  workLink: string;
   referrals: Referral[];
+  /** The profile taps, asked inside the application. Checked with lib/profile. */
+  profile: StudentProfile;
 };
 
 export type StudentField = keyof StudentApplication;
@@ -32,11 +37,13 @@ export const emptyStudentApplication: StudentApplication = {
   major: "",
   linkedin: "",
   resume: null,
+  workLink: "",
   referrals: [],
+  profile: emptyProfile,
 };
 
 export const studentFields: StudentField[] = [
-  "name", "email", "gradYear", "major", "linkedin", "resume", "referrals",
+  "name", "email", "gradYear", "major", "linkedin", "resume", "workLink", "referrals",
 ];
 
 const EMAIL = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
@@ -50,6 +57,22 @@ export function normalizeLinkedIn(value: string) {
   const v = value.trim();
   if (!v) return v;
   return /^https?:\/\//i.test(v) ? v : `https://${v}`;
+}
+
+/** A web link someone typed, with https:// added when they left it off. */
+export function normalizeLink(value: string) {
+  const v = value.trim();
+  if (!v) return v;
+  return /^https?:\/\//i.test(v) ? v : `https://${v}`;
+}
+
+export function isWebLink(value: string) {
+  try {
+    const url = new URL(normalizeLink(value));
+    return (url.protocol === "https:" || url.protocol === "http:") && url.hostname.includes(".");
+  } catch {
+    return false;
+  }
 }
 
 export function isLinkedInUrl(value: string) {
@@ -81,6 +104,12 @@ function checkField(field: StudentField, a: StudentApplication): string | undefi
       if (!a.resume) return "Upload your resume to continue.";
       if (!resumeRules.types.includes(a.resume.type)) return "Resumes need to be a PDF.";
       return a.resume.size <= resumeRules.maxBytes ? undefined : "That file is over 5 MB.";
+    case "workLink":
+      if (!a.workLink.trim()) return undefined;
+      if (a.workLink.length > 300) return "That link is too long.";
+      return isWebLink(a.workLink) ? undefined : "That doesn't look like a link.";
+    case "profile":
+      return undefined;
     case "referrals": {
       const filled = a.referrals.filter((r) => r.name.trim() || r.email.trim());
       if (filled.length < referralLimits.min) return "Add at least one person.";

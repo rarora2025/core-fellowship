@@ -2,14 +2,15 @@
  * Interview slots, generated from the windows in content/interviews.
  * Pure functions, so the server and the browser agree on ids and times.
  */
-import { interviewConfig, interviewWindows, type InterviewWindow } from "@/content/interviews";
+import { interviewConfig, interviewers, interviewWindows, type InterviewerKey, type InterviewWindow } from "@/content/interviews";
 
 export type Slot = {
-  /** Stable id: start time in UTC, e.g. 2026-12-01T19:00Z */
+  /** Stable id: start time in UTC and who interviews, e.g. 2026-12-01T19:00Z-dev */
   id: string;
   start: string; // ISO
   end: string; // ISO
   location: string;
+  interviewer: InterviewerKey;
 };
 
 /** Offset in ms between UTC and `timeZone` at a given instant. */
@@ -44,13 +45,23 @@ function slotsFor(w: InterviewWindow): Slot[] {
   const out: Slot[] = [];
   for (let t = zoned(w.date, w.start); t + step <= end; t += step) {
     const iso = new Date(t).toISOString();
-    out.push({ id: iso.slice(0, 16) + "Z", start: iso, end: new Date(t + step).toISOString(), location: w.location });
+    out.push({
+      id: `${iso.slice(0, 16)}Z-${w.interviewer}`,
+      start: iso,
+      end: new Date(t + step).toISOString(),
+      location: w.location,
+      interviewer: w.interviewer,
+    });
   }
   return out;
 }
 
 export function allSlots(): Slot[] {
   return interviewWindows.flatMap(slotsFor).sort((a, b) => a.start.localeCompare(b.start));
+}
+
+export function interviewerOf(slot: Slot) {
+  return interviewers[slot.interviewer];
 }
 
 export function findSlot(id: string) {
@@ -66,6 +77,11 @@ const tz = { timeZone: interviewConfig.timeZone };
 
 export function formatDay(iso: string) {
   return new Date(iso).toLocaleDateString("en-US", { ...tz, weekday: "long", month: "long", day: "numeric" });
+}
+
+/** "Wed, Dec 2" */
+export function formatShortDay(iso: string) {
+  return new Date(iso).toLocaleDateString("en-US", { ...tz, weekday: "short", month: "short", day: "numeric" });
 }
 
 export function formatTime(iso: string) {

@@ -10,7 +10,7 @@ export async function POST(request: Request) {
   const { slotId } = (await request.json().catch(() => ({}))) as { slotId?: string };
   if (typeof slotId !== "string") return NextResponse.json({ ok: false, error: "Pick a time." }, { status: 400 });
   try {
-    const slot = await bookSlot(me.id, slotId);
+    const slot = await bookSlot(me, slotId);
     return NextResponse.json({ ok: true, slot });
   } catch (e) {
     if (e instanceof BookingError) return NextResponse.json({ ok: false, error: e.message }, { status: 409 });
@@ -22,7 +22,7 @@ export async function DELETE() {
   const me = await currentStudent();
   if (!me) return NextResponse.json({ ok: false, error: "Not signed in." }, { status: 401 });
   try {
-    await cancelBooking(me.id);
+    await cancelBooking(me);
     return NextResponse.json({ ok: true });
   } catch (e) {
     if (e instanceof BookingError) return NextResponse.json({ ok: false, error: e.message }, { status: 409 });

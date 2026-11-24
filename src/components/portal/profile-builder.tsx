@@ -4,42 +4,20 @@ import * as React from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { AnimatePresence, motion, useReducedMotion, type Variants } from "framer-motion";
-import { ArrowLeft, ArrowRight, Code2, Loader2, Palette, PenLine, X } from "lucide-react";
+import { ArrowLeft, ArrowRight, Loader2, X } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
-import { ChipGroup } from "@/components/apply/chip-group";
-import { IconTiles, interestIcons, roleIcons } from "@/components/apply/icon-tiles";
-import { EnvironmentPicker } from "@/components/portal/environment-picker";
+import { ProfileInput, profileFieldIsWide, profileFieldSkippable } from "@/components/portal/profile-inputs";
 import { easeOutSoft } from "@/components/motion/easing";
 import { portalCard } from "@/components/portal/ui";
-import {
-  availabilityOptions,
-  builderTypeHints,
-  builderTypeOptions,
-  environmentPairs,
-  fascinationOptions,
-  profileInterestOptions,
-  profileLimits,
-  profileQuestions,
-  profileRoleOptions,
-  profileSkillOptions,
-} from "@/content/profile";
+import { environmentPairs, profileQuestions } from "@/content/profile";
 import { checkProfileField, type ProfileField, type StudentProfile } from "@/lib/profile";
 import { cn } from "@/lib/utils";
 
 const INPUT_ID = "answer";
-const builderIcons = { Technical: Code2, Creative: PenLine, Artist: Palette };
 
 const iconButton =
   "grid size-10 place-items-center rounded-full text-muted-foreground outline-none transition-colors duration-300 hover:bg-muted hover:text-foreground focus-visible:ring-[3px] focus-visible:ring-ring/50";
-
-/** Caps a multi-select at `max`, with a message when someone tries to go over. */
-function capped(max: number, onOver: (msg: string) => void, set: (v: string[]) => void) {
-  return (next: string[]) => {
-    if (next.length > max) return onOver(`Up to ${max === 3 ? "three" : max}. Unpick one first.`);
-    set(next);
-  };
-}
 
 /**
  * Profile builder: one question per screen, same motion and card as
@@ -156,7 +134,7 @@ export function ProfileBuilder({
   }
 
   const describedBy = error ? `${INPUT_ID}-error` : question.hint ? `${INPUT_ID}-hint` : undefined;
-  const wide = field === "roles" || field === "interests" || field === "builderTypes";
+  const wide = profileFieldIsWide(field);
 
   return (
     <div className="w-full">
@@ -206,8 +184,8 @@ export function ProfileBuilder({
           }}
           className="flex w-full flex-col items-center text-center"
         >
-          <motion.p variants={child} custom={direction} className="mb-3 text-[13px] tabular-nums text-subtle-foreground">
-            {index + 1} of {profileQuestions.length}
+          <motion.p variants={child} custom={direction} className="mb-3 text-[13px] text-subtle-foreground">
+            {question.eyebrow ?? `${index + 1} of ${profileQuestions.length}`}
           </motion.p>
           <motion.h1
             variants={child}
@@ -234,93 +212,14 @@ export function ProfileBuilder({
             className={cn(portalCard, "mt-8 w-full p-2 text-left sm:mt-9", wide ? "max-w-[600px]" : "max-w-[520px]")}
           >
             <div className="px-2.5 pb-2.5 pt-2.5 sm:px-4 sm:pb-3 sm:pt-4">
-              {field === "availability" && (
-                <ChipGroup
-                  id={INPUT_ID}
-                  labelledBy="question"
-                  describedBy={describedBy}
-                  options={availabilityOptions}
-                  value={data.availability}
-                  onChange={(v) => set("availability", v)}
-                  invalid={!!error}
-                />
-              )}
-
-              {field === "roles" && (
-                <IconTiles
-                  options={profileRoleOptions}
-                  icons={roleIcons}
-                  value={data.roles}
-                  describedBy={describedBy}
-                  onChange={capped(profileLimits.roles, setError, (v) => set("roles", v))}
-                />
-              )}
-
-              {field === "interests" && (
-                <IconTiles
-                  options={profileInterestOptions}
-                  icons={interestIcons}
-                  value={data.interests}
-                  describedBy={describedBy}
-                  onChange={capped(profileLimits.interests, setError, (v) =>
-                    // "Open to anything" stands alone.
-                    set("interests", v.at(-1) === "Open to anything" ? ["Open to anything"] : v.filter((x) => x !== "Open to anything"))
-                  )}
-                />
-              )}
-
-              {field === "builderTypes" && (
-                <>
-                  <IconTiles
-                    options={builderTypeOptions}
-                    icons={builderIcons}
-                    value={data.builderTypes}
-                    describedBy={describedBy}
-                    onChange={(v) => set("builderTypes", v)}
-                  />
-                  <dl className="mt-3 grid gap-1 px-1 text-[13px] text-muted-foreground sm:grid-cols-3 sm:gap-2">
-                    {builderTypeOptions.map((b) => (
-                      <div key={b}>
-                        <dt className="sr-only">{b}</dt>
-                        <dd>
-                          <span className="font-medium text-foreground sm:hidden">{b}: </span>
-                          {builderTypeHints[b]}
-                        </dd>
-                      </div>
-                    ))}
-                  </dl>
-                </>
-              )}
-
-              {field === "skills" && (
-                <ChipGroup
-                  id={INPUT_ID}
-                  labelledBy="question"
-                  describedBy={describedBy}
-                  options={profileSkillOptions}
-                  value={data.skills}
-                  onChange={capped(profileLimits.skills, setError, (v) => set("skills", v))}
-                  allowCustom
-                  customPlaceholder="Add a tool"
-                />
-              )}
-
-              {field === "fascinations" && (
-                <ChipGroup
-                  id={INPUT_ID}
-                  labelledBy="question"
-                  describedBy={describedBy}
-                  options={fascinationOptions}
-                  value={data.fascinations}
-                  onChange={capped(profileLimits.fascinations, setError, (v) => set("fascinations", v))}
-                  allowCustom
-                  customPlaceholder="Something else"
-                />
-              )}
-
-              {field === "environment" && (
-                <EnvironmentPicker value={data.environment} onChange={(v) => set("environment", v)} describedBy={describedBy} />
-              )}
+              <ProfileInput
+                field={field}
+                data={data}
+                set={set}
+                onError={setError}
+                describedBy={describedBy}
+                invalid={!!error}
+              />
 
               <p id={`${INPUT_ID}-error`} role="alert" className="min-h-5 px-1 pt-1.5 text-[13px] text-destructive">
                 {error}
@@ -338,11 +237,7 @@ export function ProfileBuilder({
                   "Finish profile"
                 ) : (
                   <>
-                    {(field === "builderTypes" && !data.builderTypes.length) ||
-                    (field === "skills" && !data.skills.length) ||
-                    (field === "fascinations" && !data.fascinations.length)
-                      ? "Skip"
-                      : "Continue"}
+                    {profileFieldSkippable(field, data) ? "Skip" : "Continue"}
                     <ArrowRight className="transition-transform duration-300 group-hover/button:translate-x-0.5" />
                   </>
                 )}

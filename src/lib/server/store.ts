@@ -1,7 +1,7 @@
 import "server-only";
 
 import { randomUUID } from "node:crypto";
-import { mkdir, readFile, rename, stat, writeFile } from "node:fs/promises";
+import { mkdir, readdir, readFile, rename, stat, writeFile } from "node:fs/promises";
 import path from "node:path";
 
 /**
@@ -36,7 +36,9 @@ async function sb(pathname: string, init: RequestInit & { prefer?: string } = {}
     cache: "no-store",
     headers: {
       apikey: SB_KEY!,
-      Authorization: `Bearer ${SB_KEY}`,
+      // The old service_role key is a JWT and goes in Authorization too.
+      // The newer sb_secret_ keys aren't JWTs: the apikey header alone is enough.
+      ...(SB_KEY?.startsWith("eyJ") ? { Authorization: `Bearer ${SB_KEY}` } : {}),
       ...(init.body && !(init.body instanceof Uint8Array || Buffer.isBuffer(init.body)) ? { "Content-Type": "application/json" } : {}),
       ...(init.prefer ? { Prefer: init.prefer } : {}),
       ...init.headers,
@@ -110,6 +112,25 @@ const supabase = {
   },
   async cancel(applicationId: string) {
     await sb(`/rest/v1/bookings?application_id=eq.${q(applicationId)}`, { method: "DELETE" });
+  },
+  async allApplications(): Promise<StoredApplication[]> {
+    const rows: { id: string; received_at: string; data: Record<string, unknown> }[] = await sb(
+      "/rest/v1/applications?select=id,received_at,data&order=received_at.desc&limit=5000"
+    );
+    return rows.map((r) => ({ id: r.id, receivedAt: r.received_at, application: r.data }));
+  },
+  async allProfiles(): Promise<Record<string, unknown>> {
+    const rows: { application_id: string; profile: unknown }[] = await sb("/rest/v1/profiles?select=application_id,profile&limit=5000");
+    return Object.fromEntries(rows.map((r) => [r.application_id, r.profile]));
+  },
+  /** A link to the PDF that works for ten minutes. */
+  async resume(id: string): Promise<{ url: string } | null> {
+    const res = await sb(`/storage/v1/object/sign/resumes/${q(id)}.pdf`, {
+      method: "POST",
+      body: JSON.stringify({ expiresIn: 600 }),
+    }).catch(() => null);
+    const path = res?.signedURL ?? res?.signedUrl;
+    return path ? { url: `${SB_URL}/storage/v1${path}` } : null;
   },
 };
 
@@ -205,6 +226,29 @@ const files = {
       await writeJson(BOOKINGS, raw);
     });
   },
+  async allApplications(): Promise<StoredApplication[]> {
+    const names = await readdir(STUDENTS).catch(() => [] as string[]);
+    const all = await Promise.all(
+      names.filter((n) => n.endsWith(".json")).map((n) => readJson<StoredApplication | null>(path.join(STUDENTS, n), null))
+    );
+    return all.filter((a): a is StoredApplication => !!a).sort((a, b) => b.receivedAt.localeCompare(a.receivedAt));
+  },
+  async allProfiles(): Promise<Record<string, unknown>> {
+    const names = await readdir(PROFILES).catch(() => [] as string[]);
+    const out: Record<string, unknown> = {};
+    for (const n of names.filter((n) => n.endsWith(".json"))) {
+      const raw = await readJson<{ profile?: unknown } | null>(path.join(PROFILES, n), null);
+      if (raw?.profile) out[n.slice(0, -5)] = raw.profile;
+    }
+    return out;
+  },
+  async resume(id: string): Promise<{ bytes: Uint8Array } | null> {
+    try {
+      return { bytes: await readFile(path.join(RESUMES, `${id}.pdf`)) };
+    } catch {
+      return null;
+    }
+  },
 };
 
 /* ------------------------------------------------------------------ */
@@ -224,4 +268,9 @@ export const store = {
   /** Book or move. False when someone else already holds the slot. */
   book: (applicationId: string, slotId: string) => backend.book(applicationId, slotId),
   cancel: (applicationId: string) => backend.cancel(applicationId),
+  /** Board only. */
+  allApplications: () => backend.allApplications(),
+  allProfiles: () => backend.allProfiles(),
+  resume: (id: string): Promise<{ url?: string; bytes?: Uint8Array } | null> =>
+    ID.test(id) ? backend.resume(id) : Promise.resolve(null),
 };

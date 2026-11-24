@@ -3,18 +3,23 @@
  * (client) and the API route (server).
  */
 import {
-  availabilityOptions,
   builderTypeOptions,
+  companySizeOptions,
   environmentPairs,
+  locationOptions,
   profileLimits,
   profileQuestions,
+  workAuthOptions,
 } from "@/content/profile";
 
 export type EnvironmentChoice = "left" | "either" | "right";
 export type EnvironmentKey = (typeof environmentPairs)[number]["key"];
 
 export type StudentProfile = {
-  availability: string[];
+  location: string[];
+  /** One answer, kept as a list so every field is a list of strings. */
+  workAuth: string[];
+  companySize: string[];
   roles: string[];
   interests: string[];
   builderTypes: string[];
@@ -27,7 +32,9 @@ export type ProfileField = keyof StudentProfile;
 export type ProfileErrors = Partial<Record<ProfileField, string>>;
 
 export const emptyProfile: StudentProfile = {
-  availability: [],
+  location: [],
+  workAuth: [],
+  companySize: [],
   roles: [],
   interests: [],
   builderTypes: [],
@@ -39,7 +46,7 @@ export const emptyProfile: StudentProfile = {
 export const profileFields = profileQuestions.map((q) => q.field as ProfileField);
 
 /** Fields that need an answer before the step counts as done. */
-const required: ProfileField[] = ["availability", "roles", "interests", "environment"];
+const required: ProfileField[] = ["location", "workAuth", "roles", "interests", "environment", "companySize"];
 
 const CHOICES: EnvironmentChoice[] = ["left", "either", "right"];
 
@@ -65,7 +72,9 @@ export function sanitizeProfile(input: unknown): StudentProfile {
     if (typeof c === "string" && CHOICES.includes(c as EnvironmentChoice)) environment[key] = c as EnvironmentChoice;
   }
   return {
-    availability: strings(p.availability, 10).filter((a) => availabilityOptions.includes(a)),
+    location: strings(p.location, 3).filter((a) => locationOptions.includes(a)),
+    workAuth: strings(p.workAuth, 1).filter((a) => workAuthOptions.includes(a)),
+    companySize: strings(p.companySize, 4).filter((a) => companySizeOptions.includes(a)),
     roles: strings(p.roles, profileLimits.roles),
     interests: strings(p.interests, profileLimits.interests),
     builderTypes: strings(p.builderTypes, 3).filter((b) => builderTypeOptions.includes(b)),
@@ -77,8 +86,12 @@ export function sanitizeProfile(input: unknown): StudentProfile {
 
 export function checkProfileField(field: ProfileField, p: StudentProfile): string | undefined {
   switch (field) {
-    case "availability":
-      return p.availability.length ? undefined : "Pick at least one.";
+    case "location":
+      return p.location.length ? undefined : "Pick at least one.";
+    case "workAuth":
+      return p.workAuth.length ? undefined : "Pick one.";
+    case "companySize":
+      return p.companySize.length ? undefined : "Pick at least one, or “No preference”.";
     case "roles":
       return p.roles.length ? undefined : "Pick at least one.";
     case "interests":
@@ -97,6 +110,11 @@ export function isAnswered(field: ProfileField, p: StudentProfile) {
   if (required.includes(field)) return !checkProfileField(field, p);
   const v = p[field];
   return Array.isArray(v) ? v.length > 0 : false;
+}
+
+/** The first question that still needs an answer, or -1 when all are done. */
+export function firstMissing(p: StudentProfile) {
+  return profileFields.findIndex((f) => !!checkProfileField(f, p));
 }
 
 export function profileProgress(p: StudentProfile) {

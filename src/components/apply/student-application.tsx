@@ -11,16 +11,18 @@ import { ResumeUpload } from "@/components/apply/resume-upload";
 import { LinkedInFinder } from "@/components/apply/linkedin-finder";
 import { MajorPicker, resolveMajor } from "@/components/apply/text-pickers";
 import { WheelPicker } from "@/components/apply/wheel-picker";
+import { ProfileInput, profileFieldIsWide, profileFieldSkippable } from "@/components/portal/profile-inputs";
 import { easeOutSoft } from "@/components/motion/easing";
 import {
   gradYears,
   referralLimits,
   studentQuestions,
-  type StudentQuestion,
 } from "@/content/student-application";
+import { basicsProfileFields, profileIntro, profileOutro, profileQuestions } from "@/content/profile";
 import {
   emptyStudentApplication,
   isSchoolEmail,
+  normalizeLink,
   normalizeLinkedIn,
   validateFields,
   validateStudentApplication,
@@ -29,6 +31,7 @@ import {
   type StudentField,
 } from "@/lib/applications/student";
 import { suggestEmail } from "@/lib/email-typos";
+import { checkProfileField, sanitizeProfile, type ProfileField, type StudentProfile } from "@/lib/profile";
 import { cn } from "@/lib/utils";
 
 const DRAFT_KEY = "core:student-application";
@@ -46,12 +49,16 @@ function readDraft(): Draft | null {
     const data = { ...emptyStudentApplication };
     for (const key of Object.keys(data) as StudentField[]) {
       const value = parsed.data?.[key];
+      if (key === "profile") {
+        data.profile = sanitizeProfile(value);
+        continue;
+      }
       const fallback = emptyStudentApplication[key];
       const sameShape =
         Array.isArray(fallback) ? Array.isArray(value) : key === "resume" ? value && typeof value === "object" : typeof value === typeof fallback;
       if (sameShape) (data as Record<string, unknown>)[key] = value;
     }
-    const index = Math.min(Math.max(Number(parsed.index) || 0, 0), studentQuestions.length - 1);
+    const index = Math.min(Math.max(Number(parsed.index) || 0, 0), 40);
     return { data, index };
   } catch {
     return null;
@@ -70,8 +77,43 @@ function clearDraft() {
   } catch {}
 }
 
-function fieldsOf(q: StudentQuestion): StudentField[] {
-  return [q.field as StudentField];
+/**
+ * One screen of the application. The profile questions are asked
+ * inside it, after the basics and before the paperwork, with a short
+ * intro screen in front of them.
+ */
+type Step =
+  | { kind: "app"; key: string; field: StudentField; title: string; hint?: string }
+  | { kind: "profile"; key: string; field: ProfileField; title: string; hint?: string; eyebrow?: string }
+  | { kind: "intro"; key: string; title: string; hint?: string };
+
+const BASICS = ["gradYear", "name", "email", "major"];
+
+function buildSteps(skipEmail: boolean): Step[] {
+  const app = studentQuestions
+    .filter((q) => !(skipEmail && q.field === "email"))
+    .map((q): Step => ({ kind: "app", key: q.field, field: q.field as StudentField, title: q.title, hint: q.hint }));
+  const profile = profileQuestions.map(
+    (q): Step => ({ kind: "profile", key: q.field, field: q.field as ProfileField, title: q.title, hint: q.hint, eyebrow: q.eyebrow })
+  );
+  const isBasic = (s: Step) => (s.kind === "app" ? BASICS.includes(s.field) : basicsProfileFields.includes(s.key));
+  return [
+    ...app.filter(isBasic),
+    ...profile.filter(isBasic),
+    { kind: "intro", key: "intro", title: profileIntro.title, hint: profileIntro.hint },
+    ...profile.filter((s) => !isBasic(s)),
+    ...app.filter((s) => !isBasic(s)),
+  ];
+}
+
+/** Every error for this application, keyed by the field it belongs to. */
+function errorsFor(a: StudentApplication): Record<string, string> {
+  const errs: Record<string, string> = { ...validateStudentApplication(a) };
+  for (const q of profileQuestions) {
+    const msg = checkProfileField(q.field as ProfileField, a.profile);
+    if (msg) errs[q.field] = msg;
+  }
+  return errs;
 }
 
 const iconButton =
@@ -107,14 +149,10 @@ export function StudentApplicationForm({ initialEmail = "" }: { initialEmail?: s
   }, [data, index, hydrated, status]);
 
   // Skip the email question when the homepage already gave us a school email.
-  const questions = React.useMemo(
-    () => (isSchoolEmail(initialEmail) ? studentQuestions.filter((q) => q.field !== "email") : studentQuestions),
-    [initialEmail]
-  );
+  const questions = React.useMemo(() => buildSteps(isSchoolEmail(initialEmail)), [initialEmail]);
   const question = questions[Math.min(index, questions.length - 1)];
-  const field = question.field as StudentField;
-  const fields = fieldsOf(question);
-  const [, setErrorField] = React.useState<StudentField | null>(null);
+  const field = question.kind === "app" ? question.field : null;
+  const profileField = question.kind === "profile" ? question.field : null;
   const isLast = index >= questions.length - 1;
 
   const set: Setter = React.useCallback((key, value) => {
@@ -122,23 +160,19 @@ export function StudentApplicationForm({ initialEmail = "" }: { initialEmail?: s
     setError(null);
   }, []);
 
+  const setProfile = React.useCallback(<K extends ProfileField>(key: K, value: StudentProfile[K]) => {
+    setData((d) => ({ ...d, profile: { ...d.profile, [key]: value } }));
+    setError(null);
+  }, []);
+
   function goTo(i: number) {
     setError(null);
-    setErrorField(null);
     setPage(([cur]) => [Math.min(Math.max(i, 0), questions.length - 1), i < cur ? -1 : 1]);
   }
 
   async function submit(final: StudentApplication) {
     const tidy = { ...final, referrals: final.referrals.filter((r) => r.name.trim() || r.email.trim()) };
-    const errs = validateStudentApplication(tidy);
-    const firstBad = questions.findIndex((q) => fieldsOf(q).some((f) => errs[f]));
-    if (firstBad >= 0) {
-      const f = fieldsOf(questions[firstBad]).find((k) => errs[k])!;
-      goTo(firstBad);
-      setError(errs[f] ?? null);
-      setErrorField(f);
-      return;
-    }
+    if (showFirstError(errorsFor(tidy))) return;
     setStatus("sending");
     try {
       const res = await fetch("/api/applications/student", {
@@ -149,13 +183,7 @@ export function StudentApplicationForm({ initialEmail = "" }: { initialEmail?: s
       const body = await res.json().catch(() => ({}));
       if (res.status === 422 && body.errors) {
         setStatus("idle");
-        const bad = questions.findIndex((q) => fieldsOf(q).some((f) => body.errors[f]));
-        if (bad >= 0) {
-          const f = fieldsOf(questions[bad]).find((k) => body.errors[k])!;
-          goTo(bad);
-          setError(body.errors[f]);
-          setErrorField(f);
-        }
+        showFirstError(body.errors);
         return;
       }
       if (!res.ok) throw new Error(String(res.status));
@@ -166,12 +194,23 @@ export function StudentApplicationForm({ initialEmail = "" }: { initialEmail?: s
     }
   }
 
+  /** Jumps to the first screen with a problem. False when there's none. */
+  function showFirstError(errs: Record<string, string>) {
+    const bad = questions.findIndex((q) => q.kind !== "intro" && errs[q.key]);
+    if (bad < 0) return false;
+    goTo(bad);
+    setError(errs[questions[bad].key]);
+    return true;
+  }
+
   function next(current = data) {
-    const errs = validateFields(fields, current);
-    const bad = fields.find((f) => errs[f]);
-    if (bad) {
-      setError(errs[bad]!);
-      setErrorField(bad);
+    const msg = field
+      ? validateFields([field], current)[field]
+      : profileField
+        ? checkProfileField(profileField, current.profile)
+        : undefined;
+    if (msg) {
+      setError(msg);
       document.getElementById(INPUT_ID)?.focus();
       return;
     }
@@ -182,6 +221,10 @@ export function StudentApplicationForm({ initialEmail = "" }: { initialEmail?: s
     }
     if (field === "major") {
       value = { ...current, major: resolveMajor(current.major) };
+      setData(value);
+    }
+    if (field === "workLink") {
+      value = { ...current, workLink: normalizeLink(current.workLink) };
       setData(value);
     }
     if (isLast) return void submit(value);
@@ -208,7 +251,6 @@ export function StudentApplicationForm({ initialEmail = "" }: { initialEmail?: s
   };
 
   if (status === "sent") {
-    const first = data.name.trim().split(/\s+/)[0];
     return (
       <motion.div
         initial={{ opacity: 0, y: reduce ? 0 : 20, filter: reduce ? "none" : "blur(6px)" }}
@@ -225,14 +267,12 @@ export function StudentApplicationForm({ initialEmail = "" }: { initialEmail?: s
           <Check className="size-6" strokeWidth={2.5} aria-hidden="true" />
         </motion.span>
         <h1 className="font-display text-[clamp(2rem,1.5rem+1.8vw,2.8rem)] font-bold leading-[1.1] tracking-[-0.03em]">
-          Thanks{first ? `, ${first}` : ""}.
+          {profileOutro.title}
         </h1>
-        <p className="mt-4 max-w-sm text-[15px] leading-relaxed text-muted-foreground">
-          We got your application. Next, fill in your profile and pick a time to talk with us.
-        </p>
+        <p className="mt-4 max-w-sm text-[15px] leading-relaxed text-muted-foreground">{profileOutro.hint}</p>
         <Button asChild variant="cta" size="lg" className="mt-10 h-12 rounded-xl px-8">
-          <Link href="/portal/profile">
-            Build your profile
+          <Link href="/portal/interview">
+            {profileOutro.button}
             <ArrowRight className="transition-transform duration-300 group-hover/button:translate-x-0.5" />
           </Link>
         </Button>
@@ -245,6 +285,32 @@ export function StudentApplicationForm({ initialEmail = "" }: { initialEmail?: s
 
   const describedBy = error ? `${INPUT_ID}-error` : question.hint ? `${INPUT_ID}-hint` : undefined;
   const textField = field === "name" || field === "email";
+  const wide = field === "referrals" || (profileField !== null && profileFieldIsWide(profileField));
+  const eyebrow = question.kind === "profile" ? question.eyebrow : undefined;
+
+  const errorLine = (
+    <p id={`${INPUT_ID}-error`} role="alert" className="min-h-5 px-1 pt-1.5 text-[13px] text-destructive">
+      {error ?? (status === "failed" ? "That didn't go through. Your answers are still here, so try again." : null)}
+    </p>
+  );
+  const buttonLabel =
+    status === "sending" ? (
+      <>
+        <Loader2 className="animate-spin" />
+        Sending
+      </>
+    ) : isLast ? (
+      field === "referrals" && !data.referrals.some((r) => r.name.trim() || r.email.trim()) ? "Skip and submit" : "Submit application"
+    ) : (
+      <>
+        {question.kind === "intro"
+          ? profileIntro.button
+          : (profileField && profileFieldSkippable(profileField, data.profile)) || (field === "workLink" && !data.workLink.trim())
+            ? "Skip"
+            : "Continue"}
+        <ArrowRight className="transition-transform duration-300 group-hover/button:translate-x-0.5" />
+      </>
+    );
 
   return (
     <div className="w-full">
@@ -292,7 +358,7 @@ export function StudentApplicationForm({ initialEmail = "" }: { initialEmail?: s
       </div>
       <AnimatePresence mode="wait" initial={false} custom={direction}>
         <motion.form
-          key={question.field}
+          key={question.key}
           custom={direction}
           variants={variants}
           initial="enter"
@@ -305,6 +371,11 @@ export function StudentApplicationForm({ initialEmail = "" }: { initialEmail?: s
           }}
           className="flex w-full flex-col items-center text-center"
         >
+          {eyebrow && (
+            <motion.p variants={child} custom={direction} className="mb-3 text-[13px] text-subtle-foreground">
+              {eyebrow}
+            </motion.p>
+          )}
           <motion.h1
             variants={child}
             custom={direction}
@@ -324,7 +395,14 @@ export function StudentApplicationForm({ initialEmail = "" }: { initialEmail?: s
             </motion.p>
           )}
 
-          <motion.div variants={child} custom={direction} className={cn(cardClass, "mt-8 text-left sm:mt-9", field === "referrals" ? "max-w-[600px]" : "max-w-[460px]")}>
+          {question.kind === "intro" ? (
+            <motion.div variants={child} custom={direction} className="mt-9 w-full max-w-[300px]">
+              <Button type="submit" size="lg" variant="cta" autoFocus className="h-12 w-full rounded-xl">
+                {buttonLabel}
+              </Button>
+            </motion.div>
+          ) : (
+          <motion.div variants={child} custom={direction} className={cn(cardClass, "mt-8 text-left sm:mt-9", wide ? "max-w-[600px]" : "max-w-[460px]")}>
             <div className="px-2.5 pb-2.5 pt-2.5 sm:px-4 sm:pb-3 sm:pt-4">
               {textField && (
                 <Input
@@ -379,13 +457,40 @@ export function StudentApplicationForm({ initialEmail = "" }: { initialEmail?: s
                 <ResumeUpload id={INPUT_ID} value={data.resume} onChange={(r) => set("resume", r)} onError={setError} describedBy={describedBy} />
               )}
 
+              {field === "workLink" && (
+                <Input
+                  id={INPUT_ID}
+                  autoFocus
+                  aria-labelledby="question"
+                  aria-invalid={!!error}
+                  aria-describedby={describedBy}
+                  value={data.workLink}
+                  onChange={(e) => set("workLink", e.target.value)}
+                  type="url"
+                  inputMode="url"
+                  autoCapitalize="none"
+                  autoComplete="url"
+                  enterKeyHint="next"
+                  placeholder="github.com/you"
+                />
+              )}
+
               {field === "referrals" && (
                 <Referrals value={data.referrals} ownEmail={data.email} onChange={(v) => set("referrals", v)} describedBy={describedBy} />
               )}
 
-              <p id={`${INPUT_ID}-error`} role="alert" className="min-h-5 px-1 pt-1.5 text-[13px] text-destructive">
-                {error ?? (status === "failed" ? "That didn't go through. Your answers are still here, so try again." : null)}
-              </p>
+              {profileField && (
+                <ProfileInput
+                  field={profileField}
+                  data={data.profile}
+                  set={setProfile}
+                  onError={setError}
+                  describedBy={describedBy}
+                  invalid={!!error}
+                />
+              )}
+
+              {errorLine}
 
               <Button
                 type="submit"
@@ -394,24 +499,11 @@ export function StudentApplicationForm({ initialEmail = "" }: { initialEmail?: s
                 className="mt-1 h-12 w-full rounded-xl"
                 disabled={status === "sending"}
               >
-                {status === "sending" ? (
-                  <>
-                    <Loader2 className="animate-spin" />
-                    Sending
-                  </>
-                ) : isLast ? (
-                  field === "referrals" && !data.referrals.some((r) => r.name.trim() || r.email.trim())
-                    ? "Skip and submit"
-                    : "Submit application"
-                ) : (
-                  <>
-                    Continue
-                    <ArrowRight className="transition-transform duration-300 group-hover/button:translate-x-0.5" />
-                  </>
-                )}
+                {buttonLabel}
               </Button>
             </div>
           </motion.div>
+          )}
         </motion.form>
       </AnimatePresence>
 
