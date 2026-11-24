@@ -51,8 +51,8 @@ real Supabase project. What's left needs the domain.
 ## Before opening applications
 
 - Put the real interview times and who takes each in
-  `src/content/interviews.ts` (`interviewWindows`), and both interviewers'
-  email addresses in `interviewers` in the same file.
+  `src/content/interviews.ts` (`interviewWindows`). Both interviewers'
+  addresses are already in `interviewers` in the same file.
 - Delete the test applicants (names start with "Test Applicant", emails
   `zz-test-…@columbia.edu`) in Supabase → Table Editor → `applications`.
 - Book one real test interview and check both invites arrive.
