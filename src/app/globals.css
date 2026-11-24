@@ -18,17 +18,17 @@
   --subtle-foreground: #8a919c;
   --border: #e8ebef;
   --input: #e3e7ec;
-  --ring: #7fb3dc;
+  --ring: #559ffe;
 
-  /* Columbia blue family */
-  --brand: #54a1ff;           /* CORE logo blue */
-  --brand-deep: #2f7fe0;      /* logo blue, darkened for text on white */
-  --brand-logo: #3b8ff5;      /* logo blue for large display type (3:1+ on white) */
-  --cta: #2a74d8;             /* filled buttons in the application */
+  /* CORE blue family. #559ffe is the blue of the CORE logo tile. */
+  --brand: #559ffe;           /* CORE logo blue */
+  --brand-deep: #2f7fe0;      /* logo blue, darkened for small text on white */
+  --brand-logo: #559ffe;      /* the word "CORE", exactly as in the logo */
+  --cta: #559ffe;             /* filled buttons: white on logo blue, like the logo */
   --cta-foreground: #ffffff;
   --columbia: #b9d9eb;        /* the official light Columbia blue */
-  --columbia-soft: #eaf4fa;   /* washes and glows */
-  --columbia-deep: #2a5d8f;   /* accessible accent text on white */
+  --columbia-soft: #e8f1ff;   /* washes, tags and glows: a tint of the logo blue */
+  --columbia-deep: #2f7fe0;   /* accessible accent text on white */
   --columbia-ink: #0f2c4a;    /* deepest accent, for dark surfaces */
 
   /* shadcn/ui semantic tokens */
@@ -57,12 +57,12 @@
   --subtle-foreground: #6b7380;
   --border: #232833;
   --input: #2c323d;
-  --ring: #4f8fd6;
+  --ring: #559ffe;
 
   --brand-deep: #74b4ff;      /* lighter so it reads on dark */
-  --brand-logo: #54a1ff;
-  --cta: #54a1ff;
-  --cta-foreground: #0b0d12;
+  --brand-logo: #559ffe;
+  --cta: #559ffe;
+  --cta-foreground: #ffffff;
   --columbia-soft: #13263b;
   --columbia-deep: #8cc0f0;
   --columbia-ink: #d6e8ff;

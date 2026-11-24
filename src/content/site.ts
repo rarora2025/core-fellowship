@@ -8,8 +8,8 @@ export const siteConfig = {
   name: "CORE Fellowship",
   shortName: "CORE",
   org: "Columbia Organization of Rising Entrepreneurs",
-  // TODO: replace with the production domain once it is set up.
-  url: "https://corefellowship.example.com",
+  // The live address. Set NEXT_PUBLIC_SITE_URL in Vercel once the domain is ready.
+  url: (process.env.NEXT_PUBLIC_SITE_URL || "http://localhost:3000").replace(/\/$/, ""),
   description:
     "CORE Fellowship matches Columbia students with early-stage startups through real conversations, not just resumes.",
 };
@@ -17,7 +17,6 @@ export const siteConfig = {
 
 export const applyLinks = {
   student: { label: "Apply as a Student", href: "/apply/student" },
-  startup: { label: "Apply as a Startup", href: "/apply/startup" },
 } as const;
 
 export const heroContent = {

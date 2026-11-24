@@ -27,9 +27,9 @@ export function CoreWord({ delay = 1.0 }: { delay?: number }) {
               ? undefined
               : {
                   textShadow: [
-                    "0 0 0px rgba(84,161,255,0)",
-                    "0 0 28px rgba(84,161,255,0.65)",
-                    "0 0 0px rgba(84,161,255,0)",
+                    "0 0 0px rgba(85,159,254,0)",
+                    "0 0 28px rgba(85,159,254,0.65)",
+                    "0 0 0px rgba(85,159,254,0)",
                   ],
                 }
           }
