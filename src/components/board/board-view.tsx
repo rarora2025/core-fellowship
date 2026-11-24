@@ -1,12 +1,10 @@
 "use client";
 
 import * as React from "react";
-import { useRouter } from "next/navigation";
 import { AnimatePresence, motion, useReducedMotion } from "framer-motion";
-import { ChevronDown, Download, ExternalLink, FileText, Search, X } from "lucide-react";
+import { ChevronDown, ExternalLink, FileText, Search, X } from "lucide-react";
 
 import { CoreBulb } from "@/components/brand/core-bulb";
-import { BoardHeader, onBluePill } from "@/components/board/board-tabs";
 import { Input } from "@/components/ui/input";
 import { easeOutSoft } from "@/components/motion/easing";
 import { portalCard } from "@/components/portal/ui";
@@ -342,13 +340,9 @@ type StatKey = "all" | Status;
 /** Everyone who applied: numbers, who's next, then the table to search, sort and pool. */
 export function BoardView({
   applicants,
-  canSignOut = true,
 }: {
   applicants: Applicant[];
-  /** Off on localhost, where the board is always open. */
-  canSignOut?: boolean;
 }) {
-  const router = useRouter();
   const reduce = !!useReducedMotion();
   const [q, setQ] = React.useState("");
   const [stat, setStat] = React.useState<StatKey>("all");
@@ -411,11 +405,6 @@ export function BoardView({
     return entries;
   }, [shown, group, now]);
 
-  async function signOut() {
-    await fetch("/api/board/session", { method: "DELETE" }).catch(() => null);
-    router.refresh();
-  }
-
   const stats: { key: StatKey; label: string }[] = [
     { key: "all", label: "Applied" },
     { key: "Coming up", label: "Coming up" },
@@ -424,29 +413,9 @@ export function BoardView({
   ];
 
   return (
-    <main id="main" className="mx-auto w-full max-w-[1200px] px-4 pb-24 pt-10 sm:px-8 sm:pt-12">
-      {/* Title */}
-      <BoardHeader
-        title="Applicants"
-        active="applicants"
-        subtitle={`${counts.all} applied · ${counts["Coming up"]} coming up · ${counts.Interviewed} interviewed`}
-        actions={
-          <>
-            <a href="/api/board/export" className={onBluePill}>
-              <Download className="size-4" aria-hidden="true" />
-              Export CSV
-            </a>
-            {canSignOut && (
-              <button type="button" onClick={signOut} className={cn(onBluePill, "text-white/85")}>
-                Sign out
-              </button>
-            )}
-          </>
-        }
-      />
-
+    <main id="main" className="mx-auto w-full max-w-[1200px] px-4 pb-24 pt-8 sm:px-8">
       {/* Numbers, which also filter */}
-      <div role="radiogroup" aria-label="Show" className="mt-8 grid grid-cols-2 gap-2.5 md:grid-cols-4">
+      <div role="radiogroup" aria-label="Show" className="grid grid-cols-2 gap-2.5 md:grid-cols-4">
         {stats.map((s) => {
           const on = stat === s.key;
           return (

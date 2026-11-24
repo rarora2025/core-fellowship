@@ -1,7 +1,6 @@
 "use client";
 
 import * as React from "react";
-import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { AnimatePresence, motion, useReducedMotion } from "framer-motion";
 import {
@@ -15,7 +14,6 @@ import {
   X,
 } from "lucide-react";
 
-import { BoardHeader } from "@/components/board/board-tabs";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
@@ -95,7 +93,6 @@ export function ScheduleView({
   windows: InterviewWindow[];
   bookings: WeekBooking[];
   interviewers: { key: InterviewerKey; name: string }[];
-  canSignOut?: boolean;
 }) {
   const router = useRouter();
   const reduce = !!useReducedMotion();
@@ -109,6 +106,10 @@ export function ScheduleView({
   const [error, setError] = React.useState<string | null>(null);
   const [saved, setSaved] = React.useState<string | null>(null);
   const [open, setOpen] = React.useState<WeekBooking | null>(null);
+  // Changing weeks keeps this week on screen, dimmed, until the next one is ready.
+  const [weekPending, startWeek] = React.useTransition();
+  const goToWeek = (w: string) =>
+    startWeek(() => router.push(`/board/schedule?week=${w}`, { scroll: false }));
   // Google Calendar: busy times read in this browser only, never saved.
   const [gcal, setGcal] = React.useState<"off" | "loading" | "on">("off");
   const [gBusy, setGBusy] = React.useState<Set<string>>(new Set());
@@ -294,45 +295,48 @@ export function ScheduleView({
     <main
       id="main"
       className={cn(
-        "mx-auto w-full max-w-[1200px] px-4 pt-10 sm:px-8 sm:pt-12",
+        "mx-auto w-full max-w-[1200px] px-4 pt-8 sm:px-8",
         editing ? "pb-48" : "pb-24",
       )}
     >
-      {/* Title */}
-      <BoardHeader
-        title="Schedule"
-        active="schedule"
-        subtitle="CORE's interview times. You're both on every conversation."
-      />
-
       {/* Week, and Edit */}
-      <div className="mt-8 flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
+      <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
         <div className="flex items-center gap-2">
-          <Link
-            href={`/board/schedule?week=${addDays(week, -7)}`}
+          <button
+            type="button"
+            onClick={() => goToWeek(addDays(week, -7))}
+            disabled={!!editing}
             aria-label="Previous week"
-            className={cn(pill, "w-10 justify-center px-0")}
+            className={cn(pill, "w-10 justify-center px-0 disabled:opacity-40")}
           >
             <ChevronLeft className="size-4" />
-          </Link>
-          <p className="min-w-[150px] text-center font-display text-[18px] font-bold tracking-[-0.01em]">
+          </button>
+          <p
+            className={cn(
+              "min-w-[150px] text-center font-display text-[18px] font-bold tracking-[-0.01em] transition-opacity",
+              weekPending && "opacity-60",
+            )}
+          >
             {label(week, { month: "short", day: "numeric" })} –{" "}
             {label(addDays(week, 6), { month: "short", day: "numeric" })}
           </p>
-          <Link
-            href={`/board/schedule?week=${addDays(week, 7)}`}
+          <button
+            type="button"
+            onClick={() => goToWeek(addDays(week, 7))}
+            disabled={!!editing}
             aria-label="Next week"
-            className={cn(pill, "w-10 justify-center px-0")}
+            className={cn(pill, "w-10 justify-center px-0 disabled:opacity-40")}
           >
-            <ChevronRight className="size-4" />
-          </Link>
-          {week !== thisWeek && (
-            <Link
-              href="/board/schedule"
+            {weekPending ? <Loader2 className="size-4 animate-spin" /> : <ChevronRight className="size-4" />}
+          </button>
+          {week !== thisWeek && !editing && (
+            <button
+              type="button"
+              onClick={() => goToWeek(thisWeek)}
               className="ml-1 text-[14px] text-brand-deep underline-offset-4 hover:underline"
             >
               This week
-            </Link>
+            </button>
           )}
         </div>
 
@@ -391,7 +395,10 @@ export function ScheduleView({
       </AnimatePresence>
 
       {/* The week */}
-      <div className={cn(portalCard, "mt-5 overflow-hidden p-0")}>
+      <div
+        className={cn(portalCard, "mt-5 overflow-hidden p-0 transition-opacity duration-200", weekPending && "opacity-60")}
+        aria-busy={weekPending}
+      >
         <div className="overflow-x-auto">
           <div
             className={cn(
